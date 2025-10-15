@@ -8,9 +8,14 @@ public class Lab1 {
         ThreadCalc thread1 = new ThreadCalc(0, 49, tab);
         ThreadCalc thread2 = new ThreadCalc(50, 99, tab);
 
+        ThreadCalcule thread3 = new ThreadCalcule(0, 49, tab);
+        ThreadCalcule thread4 = new ThreadCalcule(50, 99, tab);
+
         thread1.start();
         thread2.start();
 
+        thread3.start();
+        thread4.start();
 
     }
 }
@@ -59,3 +64,45 @@ class ThreadCalc extends Thread {
 }
 
 
+class ThreadCalcule extends Thread {
+    int from;
+    int to;
+    int[] tab;
+
+    public ThreadCalcule(int from, int to, int[] tab) {
+        this.from = from;
+        this.to = to;
+        this.tab = tab;
+    }
+
+    @Override
+    public void run() {
+        int S1 = 0;
+        int S2 = 0;
+        int k = 0;
+
+        for (int i = from; i <= to; i++) {
+            if (tab[i] % 2 == 0) {
+                if (k == 0) {
+                    S1 = tab[i];
+                } else {
+                    S2 = tab[i];
+                }
+                k++;
+
+                if (k == 2) {
+                    int S = S1 + S2;
+                    System.out.println(getName() + " -> (crescător) Sum of two even values: " + S
+                            + " (values: " + S1 + ", " + S2 + ")");
+                    S1 = 0;
+                    S2 = 0;
+                    k = 0;
+                }
+            }
+        }
+
+        if (k == 1) {
+            System.out.println(getName() + " -> (crescător) Leftover single even value (no pair): " + S1);
+        }
+    }
+}
