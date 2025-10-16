@@ -24,7 +24,7 @@ public class Lab1 {
         thread3.join();
         thread4.join();
 
-        String message = "Laborator efectuat de: Cruc Maxim si Cotoman Vadim";
+        String message = "Laborator efectuat de elevii din grupa CR_232: Cruc Maxim si Cotoman Vadim";
         for (char c : message.toCharArray()) {
             System.out.print(c);
             Thread.sleep(100);
