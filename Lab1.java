@@ -4,6 +4,8 @@ public class Lab1 {
     public static void main(String[] args) throws InterruptedException {
         int[] tab = new int[100];
         for (int i = 0; i < 100; i++) {
+            tab[i] = (int)(Math.random() * 100);
+            System.out.print(tab[i] + " ");
             tab[i] = i + 1;
         }
 
