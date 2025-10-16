@@ -1,3 +1,5 @@
+import java.io.*;
+
 public class Lab1 {
     public static void main(String[] args) throws InterruptedException {
         int[] tab = new int[100];
@@ -17,6 +19,17 @@ public class Lab1 {
         thread3.start();
         thread4.start();
 
+        thread1.join();
+        thread2.join();
+        thread3.join();
+        thread4.join();
+
+        String message = "Laborator efectuat de: Cruc Maxim si Cotoman Vadim";
+        for (char c : message.toCharArray()) {
+            System.out.print(c);
+            Thread.sleep(100);
+        }
+        System.out.println();
     }
 }
 
@@ -48,8 +61,8 @@ class ThreadCalc extends Thread {
 
                 if (k == 2) {
                     int S = S1 + S2;
-                    System.out.println(getName() + " -> (descrescător) Sum of two even values: " + S
-                            + " (values: " + S1 + ", " + S2 + ")");
+                    System.out.println(getName() + " -> (descrescător) Suma a două valori pare: " + S
+                            + " (valori: " + S1 + ", " + S2 + ")");
                     S1 = 0;
                     S2 = 0;
                     k = 0;
@@ -58,7 +71,7 @@ class ThreadCalc extends Thread {
         }
 
         if (k == 1) {
-            System.out.println(getName() + " -> (descrescător) Leftover single even value (no pair): " + S1);
+            System.out.println(getName() + " -> (descrescător) Valoare pară rămasă singură (fără pereche): " + S1);
         }
     }
 }
@@ -92,8 +105,8 @@ class ThreadCalcule extends Thread {
 
                 if (k == 2) {
                     int S = S1 + S2;
-                    System.out.println(getName() + " -> (crescător) Sum of two even values: " + S
-                            + " (values: " + S1 + ", " + S2 + ")");
+                    System.out.println(getName() + " -> (crescător) Suma a două valori pare: " + S
+                            + " (valori: " + S1 + ", " + S2 + ")");
                     S1 = 0;
                     S2 = 0;
                     k = 0;
@@ -102,7 +115,7 @@ class ThreadCalcule extends Thread {
         }
 
         if (k == 1) {
-            System.out.println(getName() + " -> (crescător) Leftover single even value (no pair): " + S1);
+            System.out.println(getName() + " -> (crescător) Valoare pară rămasă singură (fără pereche): " + S1);
         }
     }
 }
