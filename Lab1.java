@@ -7,7 +7,10 @@ public class Lab1 {
             tab[i] = (int)(Math.random() * 100);
             System.out.print(tab[i] + " ");
             tab[i] = i + 1;
+            System.out.print(tab[i] + " ");
+            if(i == 50){System.out.println();}
         }
+
 
         ThreadCalc thread1 = new ThreadCalc(0, 49, tab);
         ThreadCalc thread2 = new ThreadCalc(50, 99, tab);
