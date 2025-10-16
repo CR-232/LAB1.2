@@ -4,12 +4,11 @@ public class Lab1 {
     public static void main(String[] args) throws InterruptedException {
         int[] tab = new int[100];
         for (int i = 0; i < 100; i++) {
-            tab[i] = (int)(Math.random() * 100);
-            System.out.print(tab[i] + " ");
-            tab[i] = i + 1;
+            tab[i] = (int)(Math.random() * 100) + 1;
             System.out.print(tab[i] + " ");
             if(i == 50){System.out.println();}
         }
+        System.out.println();
 
 
         ThreadCalc thread1 = new ThreadCalc(0, 49, tab);
@@ -110,6 +109,7 @@ class ThreadCalcule extends Thread {
 
                 if (k == 2) {
                     int S = S1 + S2;
+
                     System.out.println(getName() + " -> (crescător) Suma a două valori pare: " + S
                             + " (valori: " + S1 + ", " + S2 + ")");
                     S1 = 0;
