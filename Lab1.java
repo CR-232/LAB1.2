@@ -63,6 +63,7 @@ class ThreadCalc extends Thread {
                 if (k == 0) S1 = mas[i];
                 else S2 = mas[i];
                 k++;
+
                 if (k == 2) {
                     int S = S1 + S2;
                     gui.appendText(nameThread + " -> (descrescător) Suma a două valori pare: " + S +
@@ -72,6 +73,7 @@ class ThreadCalc extends Thread {
                 }
             }
         }
+
         if (k == 1) {
             gui.appendText(nameThread + " -> (descrescător) Valoare pară rămasă singură: " + S1 + "\n");
         }
@@ -101,6 +103,7 @@ class ThreadCalcule extends Thread {
                 if (k == 0) S1 = mas[i];
                 else S2 = mas[i];
                 k++;
+
                 if (k == 2) {
                     int S = S1 + S2;
                     gui.appendText(nameThread + " -> (crescător) Suma a două valori pare: " + S +
