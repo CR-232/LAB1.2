@@ -15,7 +15,7 @@ public class Lab1 {
             if (i == 49) gui.appendText("\n");
         }
         gui.appendText("\n");
-
+//lb1
 
         ThreadCalc thread1 = new ThreadCalc(0, 49, mas, "Th1", gui);
         ThreadCalc thread2 = new ThreadCalc(50, 99, mas, "Th2", gui);
