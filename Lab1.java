@@ -105,7 +105,7 @@ class ThreadCalcule extends Thread {
 
                 if (k == 2) {
                     int S = S1 + S2;
-                    gui.appendText(nameThread + " -> (crescător) Suma a două valori pare: " + S +
+                    gui.appendText(nameThread + " -> (crescător) SUMA A DOUA VALORI PARE: " + S +
                             " (valori: " + S1 + ", " + S2 + ")\n");
                     S1 = S2 = 0;
                     k = 0;
