@@ -6,7 +6,6 @@ public class Lab1 {
         int[] mas = new int[100];
         Lab1GUI gui = new Lab1GUI("Laborator PCD - CR_232");
 
-
         gui.appendText("Tablou generat:\n");
         Random rand = new Random();
         for (int i = 0; i < 100; i++) {
