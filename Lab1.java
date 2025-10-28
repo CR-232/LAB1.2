@@ -30,7 +30,7 @@ public class Lab1 {
         thread3.join();
         thread4.join();
 
-        String message = "Laborator efectuat de elevii din grupa CR-232: Cruc Maxim si Cotoman Vadim\n";
+        String message = "Laborator efectuat de elevii din grupa CR-232: Cruc Maxim si Cotoman Vadim la disciplina Programarea concurenta si distribuita\n";
         for (char c : message.toCharArray()) {
             gui.appendText(String.valueOf(c));
             Thread.sleep(100);
