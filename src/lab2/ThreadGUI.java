@@ -1,4 +1,4 @@
-package lab2;
+
 
 import javax.swing.*;
 import java.awt.*;
@@ -89,7 +89,6 @@ public class ThreadGUI extends JFrame {
                 });
             }
         };
-
 
         thread.setPriority(priority);
         thread.start();
