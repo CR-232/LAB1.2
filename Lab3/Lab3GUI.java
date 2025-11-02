@@ -1,10 +1,7 @@
-package Lab3.java;
-
 import javax.swing.*;
 import java.awt.*;
 
 public class Lab3GUI extends JFrame {
-
     private JTextArea textArea;
 
     public Lab3GUI(String title) {

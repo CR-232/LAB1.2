@@ -1,4 +1,3 @@
-import Lab3.java.Lab3GUI;
 
 import javax.swing.SwingUtilities;
 import java.util.Random;
