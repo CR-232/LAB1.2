@@ -1,13 +1,9 @@
-
 import javax.swing.SwingUtilities;
 import java.util.Random;
-import java.util.concurrent.locks.ReentrantLock;
-import java.util.concurrent.TimeUnit;
 
 public class Lab3 {
     private static Lab3GUI gui;
     private static final Object lock = new Object();
-    private static final ReentrantLock reentrantLock = new ReentrantLock();
 
     public Lab3(String title) {
         gui = new Lab3GUI(title);
@@ -51,20 +47,15 @@ public class Lab3 {
         }
     }
 
-
     public void appendText(String s) {
         synchronized (lock) {
             SwingUtilities.invokeLater(() -> gui.appendText(s));
         }
     }
 
-
     public static void appendTextWithLock(String s) {
-        reentrantLock.lock();
-        try {
+        synchronized (lock) {
             SwingUtilities.invokeLater(() -> gui.appendText(s));
-        } finally {
-            reentrantLock.unlock();
         }
     }
 }
@@ -75,7 +66,7 @@ class ThreadCalcule extends Thread {
     String nameThread;
     Lab3GUI gui;
     private static final Object printLock = new Object();
-    private static final ReentrantLock calculationLock = new ReentrantLock();
+    private static final Object calculationLock = new Object();
 
     public ThreadCalcule(int startIndex, int endIndex, int[] mas, String nameThread, Lab3GUI gui) {
         this.startIndex = startIndex;
@@ -95,14 +86,13 @@ class ThreadCalcule extends Thread {
         for (int i = startIndex; i <= endIndex; i++) {
             try {
                 synchronized (printLock) {
-                    TimeUnit.MILLISECONDS.sleep((int) (Math.random() * 40 + 10));
+                    Thread.sleep((int) (Math.random() * 40 + 10));
                 }
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
 
-            calculationLock.lock();
-            try {
+            synchronized (calculationLock) {
                 if (mas[i] >= 120 && mas[i] <= 690 && mas[i] % 2 == 0) {
                     if (k == 0) {
                         S1 = mas[i];
@@ -117,8 +107,6 @@ class ThreadCalcule extends Thread {
                         k = 0;
                     }
                 }
-            } finally {
-                calculationLock.unlock();
             }
         }
 
