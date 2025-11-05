@@ -222,13 +222,12 @@ class ThreadCalc extends Thread {
 
     private int findFirstPosition(int value, int currentIndex) {
         synchronized (printLock) {
-            for (int i = startIndex; i <= currentIndex; i--) {
+            for (int i = startIndex; i <= currentIndex; i++) {
                 if (mas[i] == value) {
                     return i;
                 }
-                return currentIndex - 1;
             }
+            return currentIndex - 1;
         }
-        return value;
     }
 }
