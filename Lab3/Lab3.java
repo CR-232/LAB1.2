@@ -1,6 +1,7 @@
 import javax.swing.SwingUtilities;
 import java.util.Random;
 
+
 public class Lab3 {
     private static Lab3GUI gui;
     private static final Object lock = new Object();
@@ -19,6 +20,7 @@ public class Lab3 {
         for (int i = 0; i < mas.length; i++) {
             mas[i] = rand.nextInt(1448) + 120;
 
+
             if (mas[i] < 1000) {
                 gui.appendText(" " + mas[i] + " ");
             } else {
@@ -31,12 +33,19 @@ public class Lab3 {
         }
         gui.appendText("\n");
 
+        ThreadCalc thread1 = new ThreadCalc(0, 49, mas, "Th1", lab3.gui);
+        ThreadCalc thread2 = new ThreadCalc(50, 99, mas, "Th2", lab3.gui);
+
         ThreadCalcule thread3 = new ThreadCalcule(0, 49, mas, "Th3", lab3.gui);
         ThreadCalcule thread4 = new ThreadCalcule(50, 99, mas, "Th4", lab3.gui);
 
+        thread1.start();
+        thread2.start();
         thread3.start();
         thread4.start();
 
+        thread1.join();
+        thread2.join();
         thread3.join();
         thread4.join();
 
@@ -139,5 +148,87 @@ class ThreadCalcule extends Thread {
             }
             return currentIndex - 1;
         }
+    }
+}
+class ThreadCalc extends Thread {
+    int startIndex, endIndex;
+    int[] mas;
+    String nameThread;
+    Lab3GUI gui;
+    private static final Object printLock = new Object();
+    private static final Object calculationLock = new Object();
+
+    public ThreadCalc(int startIndex, int endIndex, int[] mas, String nameThread, Lab3GUI gui) {
+        this.startIndex = startIndex;
+        this.endIndex = endIndex;
+        this.mas = mas;
+        this.nameThread = nameThread;
+        this.gui = gui;
+    }
+
+    @Override
+    public void run() {
+        int S1 = 0, S2 = 0, k = 0;
+        int count = 0;
+
+        printToGUI(nameThread + " a început execuția pe intervalul [" + startIndex + ", " + endIndex + "]\n");
+
+        for (int i = startIndex; i <= endIndex; i++) {
+            try {
+                synchronized (printLock) {
+                    Thread.sleep((int) (Math.random() * 40 + 10));
+                }
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            synchronized (calculationLock) {
+                if (mas[i] >= 1000 && mas[i] <= 1567 && mas[i] % 2 == 0) {
+                    if (k == 0) {
+                        S1 = mas[i];
+                        k++;
+                    } else {
+                        S2 = mas[i];
+                        int S = S1 + S2;
+                        count++;
+                        printToGUI(nameThread + " -> Suma " + count + ": " + S1 + " + " + S2 + " = " + S +
+                                " (poziții: " + findFirstPosition(S1, i) + ", " + i + ")\n");
+                        S1 = S2 = 0;
+                        k = 0;
+                    }
+                }
+            }
+        }
+
+        synchronized (printLock) {
+            if (k == 1) {
+                printToGUI(nameThread + " -> Valoare pară rămasă singură: " + S1 + " (poziție: " + findFirstPosition(S1, endIndex) + ")\n");
+            }
+        }
+
+        Lab3.appendTextWithLock(nameThread + " -> Total sume calculate: " + count + "\n");
+        printToGUI(nameThread + " a terminat execuția.\n");
+    }
+
+    private void printToGUI(String text) {
+        if (Math.random() > 0.5) {
+            synchronized (printLock) {
+                SwingUtilities.invokeLater(() -> gui.appendText(text));
+            }
+        } else {
+            Lab3.appendTextWithLock(text);
+        }
+    }
+
+    private int findFirstPosition(int value, int currentIndex) {
+        synchronized (printLock) {
+            for (int i = startIndex; i <= currentIndex; i--) {
+                if (mas[i] == value) {
+                    return i;
+                }
+                return currentIndex - 1;
+            }
+        }
+        return value;
     }
 }
