@@ -1,7 +1,6 @@
 import javax.swing.SwingUtilities;
 import java.util.Random;
 
-
 public class Lab3 {
     private static Lab3GUI gui;
     private static final Object lock = new Object();
@@ -19,7 +18,6 @@ public class Lab3 {
 
         for (int i = 0; i < mas.length; i++) {
             mas[i] = rand.nextInt(1448) + 120;
-
 
             if (mas[i] < 1000) {
                 gui.appendText(" " + mas[i] + " ");
@@ -94,14 +92,19 @@ class ThreadCalcule extends Thread {
 
         for (int i = startIndex; i <= endIndex; i++) {
             try {
-                synchronized (printLock) {
-                    Thread.sleep((int) (Math.random() * 40 + 10));
-                }
+
+                Thread.yield();
+                Thread.sleep((int) (Math.random() * 40 + 10));
             } catch (InterruptedException e) {
+
+                if (Thread.interrupted()) {
+                    printToGUI(nameThread + " a fost întrerupt și se încheie.\n");
+                    return;
+                }
                 e.printStackTrace();
             }
 
-            synchronized (calculationLock) {
+            if (isThreadActive()) {
                 if (mas[i] >= 120 && mas[i] <= 690 && mas[i] % 2 == 0) {
                     if (k == 0) {
                         S1 = mas[i];
@@ -119,44 +122,51 @@ class ThreadCalcule extends Thread {
             }
         }
 
-        synchronized (printLock) {
-            if (k == 1) {
-                printToGUI(nameThread + " -> Valoare pară rămasă singură: " + S1 + " (poziție: " + findFirstPosition(S1, endIndex) + ")\n");
-            }
+        if (k == 1) {
+            printToGUI(nameThread + " -> Valoare pară rămasă singură: " + S1 + " (poziție: " + findFirstPosition(S1, endIndex) + ")\n");
         }
 
         Lab3.appendTextWithLock(nameThread + " -> Total sume calculate: " + count + "\n");
         printToGUI(nameThread + " a terminat execuția.\n");
     }
 
+
+    private boolean isThreadActive() {
+        Thread currentThread = Thread.currentThread();
+        return currentThread.isAlive() && !currentThread.isInterrupted();
+    }
+
     private void printToGUI(String text) {
+
+        try {
+            Thread.sleep(1);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+
         if (Math.random() > 0.5) {
-            synchronized (printLock) {
-                SwingUtilities.invokeLater(() -> gui.appendText(text));
-            }
+            SwingUtilities.invokeLater(() -> gui.appendText(text));
         } else {
             Lab3.appendTextWithLock(text);
         }
     }
 
     private int findFirstPosition(int value, int currentIndex) {
-        synchronized (printLock) {
-            for (int i = startIndex; i <= currentIndex; i++) {
-                if (mas[i] == value) {
-                    return i;
-                }
+        for (int i = startIndex; i <= currentIndex; i++) {
+            Thread.yield();
+            if (mas[i] == value) {
+                return i;
             }
-            return currentIndex - 1;
         }
+        return currentIndex - 1;
     }
 }
+
 class ThreadCalc extends Thread {
     int startIndex, endIndex;
     int[] mas;
     String nameThread;
     Lab3GUI gui;
-    private static final Object printLock = new Object();
-    private static final Object calculationLock = new Object();
 
     public ThreadCalc(int startIndex, int endIndex, int[] mas, String nameThread, Lab3GUI gui) {
         this.startIndex = startIndex;
@@ -175,14 +185,20 @@ class ThreadCalc extends Thread {
 
         for (int i = startIndex; i <= endIndex; i++) {
             try {
-                synchronized (printLock) {
-                    Thread.sleep((int) (Math.random() * 40 + 10));
-                }
+
+                Thread.yield();
+                Thread.sleep((int) (Math.random() * 40 + 10));
             } catch (InterruptedException e) {
+
+                if (Thread.interrupted()) {
+                    printToGUI(nameThread + " a fost întrerupt.\n");
+                    return;
+                }
                 e.printStackTrace();
             }
 
-            synchronized (calculationLock) {
+
+            if (isThreadValid()) {
                 if (mas[i] >= 1000 && mas[i] <= 1567 && mas[i] % 2 == 0) {
                     if (k == 0) {
                         S1 = mas[i];
@@ -200,34 +216,41 @@ class ThreadCalc extends Thread {
             }
         }
 
-        synchronized (printLock) {
-            if (k == 1) {
-                printToGUI(nameThread + " -> Valoare pară rămasă singură: " + S1 + " (poziție: " + findFirstPosition(S1, endIndex) + ")\n");
-            }
+        if (k == 1) {
+            printToGUI(nameThread + " -> Valoare pară rămasă singură: " + S1 + " (poziție: " + findFirstPosition(S1, endIndex) + ")\n");
         }
 
         Lab3.appendTextWithLock(nameThread + " -> Total sume calculate: " + count + "\n");
         printToGUI(nameThread + " a terminat execuția.\n");
     }
 
+
+    private boolean isThreadValid() {
+        return Thread.currentThread().isAlive();
+    }
+
     private void printToGUI(String text) {
+
+        try {
+            Thread.sleep(2);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+
         if (Math.random() > 0.5) {
-            synchronized (printLock) {
-                SwingUtilities.invokeLater(() -> gui.appendText(text));
-            }
+            SwingUtilities.invokeLater(() -> gui.appendText(text));
         } else {
             Lab3.appendTextWithLock(text);
         }
     }
 
     private int findFirstPosition(int value, int currentIndex) {
-        synchronized (printLock) {
-            for (int i = startIndex; i <= currentIndex; i++) {
-                if (mas[i] == value) {
-                    return i;
-                }
+        for (int i = startIndex; i <= currentIndex; i++) {
+            Thread.yield();
+            if (mas[i] == value) {
+                return i;
             }
-            return currentIndex - 1;
         }
+        return currentIndex - 1;
     }
 }
