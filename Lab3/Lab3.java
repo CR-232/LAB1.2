@@ -58,20 +58,17 @@ public class Lab3 {
             Thread.sleep(100);
         }
 
-
         String grupa = "Th4 -> Grupa: CR-232\n";
         for (char c : grupa.toCharArray()) {
             appendTextWithLock(String.valueOf(c));
             Thread.sleep(100);
         }
 
-
         String prenumeStudent = "Th1 -> Prenume student: Maxim,Vadim\n";
         for (char c : prenumeStudent.toCharArray()) {
             appendTextWithLock(String.valueOf(c));
             Thread.sleep(100);
         }
-
 
         String disciplina = "Th3 -> Disciplina: Programarea concurentă și distribuită\n";
         for (char c : disciplina.toCharArray()) {
@@ -80,11 +77,6 @@ public class Lab3 {
         }
     }
 
-    public void appendText(String s) {
-        synchronized (lock) {
-            SwingUtilities.invokeLater(() -> gui.appendText(s));
-        }
-    }
 
     public static void appendTextWithLock(String s) {
         synchronized (lock) {
