@@ -92,11 +92,9 @@ class ThreadCalcule extends Thread {
 
         for (int i = startIndex; i <= endIndex; i++) {
             try {
-
                 Thread.yield();
                 Thread.sleep((int) (Math.random() * 40 + 10));
             } catch (InterruptedException e) {
-
                 if (Thread.interrupted()) {
                     printToGUI(nameThread + " a fost întrerupt și se încheie.\n");
                     return;
@@ -128,8 +126,17 @@ class ThreadCalcule extends Thread {
 
         Lab3.appendTextWithLock(nameThread + " -> Total sume calculate: " + count + "\n");
         printToGUI(nameThread + " a terminat execuția.\n");
-    }
 
+        // 🔽 Cerința nouă:
+        switch (nameThread) {
+            case "Th3":
+                Lab3.appendTextWithLock("Disciplina: Programarea concurentă și distribuită\n");
+                break;
+            case "Th4":
+                Lab3.appendTextWithLock("Grupa: CR-232\n");
+                break;
+        }
+    }
 
     private boolean isThreadActive() {
         Thread currentThread = Thread.currentThread();
@@ -137,7 +144,6 @@ class ThreadCalcule extends Thread {
     }
 
     private void printToGUI(String text) {
-
         try {
             Thread.sleep(1);
         } catch (InterruptedException e) {
@@ -185,18 +191,15 @@ class ThreadCalc extends Thread {
 
         for (int i = startIndex; i <= endIndex; i++) {
             try {
-
                 Thread.yield();
                 Thread.sleep((int) (Math.random() * 40 + 10));
             } catch (InterruptedException e) {
-
                 if (Thread.interrupted()) {
                     printToGUI(nameThread + " a fost întrerupt.\n");
                     return;
                 }
                 e.printStackTrace();
             }
-
 
             if (isThreadValid()) {
                 if (mas[i] >= 1000 && mas[i] <= 1567 && mas[i] % 2 == 0) {
@@ -222,15 +225,22 @@ class ThreadCalc extends Thread {
 
         Lab3.appendTextWithLock(nameThread + " -> Total sume calculate: " + count + "\n");
         printToGUI(nameThread + " a terminat execuția.\n");
-    }
 
+        switch (nameThread) {
+            case "Th1":
+                Lab3.appendTextWithLock("Prenume student: Maxim,Vadim\n");
+                break;
+            case "Th2":
+                Lab3.appendTextWithLock("Nume student: Cruc,Cotoman\n");
+                break;
+        }
+    }
 
     private boolean isThreadValid() {
         return Thread.currentThread().isAlive();
     }
 
     private void printToGUI(String text) {
-
         try {
             Thread.sleep(2);
         } catch (InterruptedException e) {
