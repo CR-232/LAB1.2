@@ -47,34 +47,6 @@ public class Lab3 {
         thread3.join();
         thread4.join();
 
-        displayInfoWithDelay();
-    }
-
-    private static void displayInfoWithDelay() throws InterruptedException {
-
-        String numeStudent = "Th2 -> Nume student: Cruc,Cotoman\n";
-        for (char c : numeStudent.toCharArray()) {
-            appendTextWithLock(String.valueOf(c));
-            Thread.sleep(100);
-        }
-
-        String grupa = "Th4 -> Grupa: CR-232\n";
-        for (char c : grupa.toCharArray()) {
-            appendTextWithLock(String.valueOf(c));
-            Thread.sleep(100);
-        }
-
-        String prenumeStudent = "Th1 -> Prenume student: Maxim,Vadim\n";
-        for (char c : prenumeStudent.toCharArray()) {
-            appendTextWithLock(String.valueOf(c));
-            Thread.sleep(100);
-        }
-
-        String disciplina = "Th3 -> Disciplina: Programarea concurentă și distribuită\n";
-        for (char c : disciplina.toCharArray()) {
-            appendTextWithLock(String.valueOf(c));
-            Thread.sleep(100);
-        }
     }
 
 
@@ -90,7 +62,8 @@ class ThreadCalcule extends Thread {
     int[] mas;
     String nameThread;
     Lab3GUI gui;
-
+    private static final Object printLock = new Object();
+    private static final Object calculationLock = new Object();
 
     public ThreadCalcule(int startIndex, int endIndex, int[] mas, String nameThread, Lab3GUI gui) {
         this.startIndex = startIndex;
@@ -143,6 +116,16 @@ class ThreadCalcule extends Thread {
 
         Lab3.appendTextWithLock(nameThread + " -> Total sume calculate: " + count + "\n");
         printToGUI(nameThread + " a terminat execuția.\n");
+
+
+        switch (nameThread) {
+            case "Th3":
+                Lab3.appendTextWithLock("Disciplina: Programarea concurentă și distribuită\n");
+                break;
+            case "Th4":
+                Lab3.appendTextWithLock("Grupa: CR-232\n");
+                break;
+        }
     }
 
     private boolean isThreadActive() {
@@ -232,6 +215,15 @@ class ThreadCalc extends Thread {
 
         Lab3.appendTextWithLock(nameThread + " -> Total sume calculate: " + count + "\n");
         printToGUI(nameThread + " a terminat execuția.\n");
+
+        switch (nameThread) {
+            case "Th1":
+                Lab3.appendTextWithLock("Prenume student: Maxim,Vadim\n");
+                break;
+            case "Th2":
+                Lab3.appendTextWithLock("Nume student: Cruc,Cotoman\n");
+                break;
+        }
     }
 
     private boolean isThreadValid() {
