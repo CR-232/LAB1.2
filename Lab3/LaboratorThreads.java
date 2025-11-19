@@ -371,5 +371,5 @@ public class LaboratorThreads {
             }
             return currentIndex - 1;
         }
-    }s
+    }
 }
