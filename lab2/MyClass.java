@@ -15,7 +15,7 @@ public class MyClass {
 
     public static void main(String[] args) {
 
-        ThreadGroup mainGroup = new ThreadGroup("Main");
+        ThreadGroup mainGroup = Thread.currentThread().getThreadGroup();
 
         MyThread Th1 = new MyThread(mainGroup, "Th1", 8);
         MyThread Th2 = new MyThread(mainGroup, "Th2", 3);
@@ -52,6 +52,7 @@ public class MyClass {
         Th2_gm.start();
         Th3_gm.start();
 
+        mainGroup.list();
         System.out.println("\n Structura ThreadGroup");
     }
 }
