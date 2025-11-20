@@ -121,6 +121,7 @@ class Depozit {
 
     boolean gata = false;
     ProducerConsumerGUI gui;
+    private int nr;
 
     public Depozit(int D, int Y, int Z, ProducerConsumerGUI gui) {
         this.D = D;
@@ -198,15 +199,7 @@ class Depozit {
             } catch (InterruptedException ignored) {}
         }
 
-        int nr = buffer[read];
-        read = (read + 1) % D;
-        count--;
-        consumateTotal++;
-
-        gui.log("Consumatorul " + cid + " a preluat: " + nr +
-                " (în depozit: " + count + "/" + D +
-                ", consumate: " + consumateTotal + "/" + totalNecesare + ")");
-
+        
 
         if (consumateTotal == totalNecesare) {
             gata = true;
