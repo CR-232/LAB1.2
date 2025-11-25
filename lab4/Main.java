@@ -93,7 +93,7 @@ class Consumer extends Thread {
         this.gui = gui;
     }
 
-    // Metoda ia() pentru Consumer
+
     public int ia() {
         int nr = depozit.ia();
 
