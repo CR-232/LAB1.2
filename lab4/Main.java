@@ -1,5 +1,6 @@
 import java.util.Random;
 
+//CLASA DE BAZA - Main
 public class Main {
     public static void main(String[] args) {
         ProducerConsumerGUI gui = new ProducerConsumerGUI();
@@ -7,7 +8,6 @@ public class Main {
         int D = 5;
         int Y = 4;
         int Z = 2;
-        int X = 3;
 
         Depozit depozit = new Depozit(D, Y, Z, gui);
 
@@ -30,7 +30,7 @@ public class Main {
         c4.start();
     }
 }
-
+//CLASA PRODUCER - Vadim
 class Producer extends Thread {
     private int id;
     private Depozit depozit;
@@ -43,7 +43,7 @@ class Producer extends Thread {
         this.gui = gui;
     }
 
-    // Metoda pune() pentru Producer
+
     public void pune(int nr) {
         depozit.pune(nr);
         gui.log("Producător " + id + " a pus produs: " + nr);
@@ -79,6 +79,7 @@ class Producer extends Thread {
     }
 }
 
+//CLASA CONSUMER - Maxim
 class Consumer extends Thread {
     private int id;
     private Depozit depozit;
@@ -123,6 +124,7 @@ class Consumer extends Thread {
     }
 }
 
+//CLASA DEPOZIT - Clasa comuna
 class Depozit {
     private int[] buffer;
     int D;
