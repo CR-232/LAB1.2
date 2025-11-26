@@ -42,7 +42,7 @@ public class LaboratorThreads {
     }
 
     public static void main(String[] args) throws InterruptedException {
-        // Initialize GUI
+
         gui = new Lab3GUI("Laborator PCD - CR_232");
 
         System.out.println("=== LABORATOR CR-232 ===");
@@ -129,15 +129,9 @@ public class LaboratorThreads {
         currentDisplay++;
     }
 
-    public static void appendTextWithLock(String s) {
-        synchronized (lock) {
-            SwingUtilities.invokeLater(() -> gui.appendText(s));
-        }
-    }
 
-    // ---------------------------------------------------
-    //                THREAD CALC (TH1, TH2)
-    // ---------------------------------------------------
+
+    //clasa threadcalc-efectuat de CRUC MAXIM
     static class ThreadCalc extends Thread {
         int startIndex, endIndex;
         int[] mas;
@@ -159,7 +153,6 @@ public class LaboratorThreads {
             int pos1 = -1, pos2 = -1, count = 0;
 
             if (nameThread.equals("Th1")) {
-                // PARCURGERE ÎNAINTE
                 for (int i = startIndex; i <= endIndex; i++) {
                     if (mas[i] % 2 == 0) {
                         if (pos1 == -1) pos1 = i;
@@ -175,7 +168,6 @@ public class LaboratorThreads {
             }
 
             if (nameThread.equals("Th2")) {
-                // PARCURGERE INVERSĂ
                 for (int i = endIndex; i >= startIndex; i--) {
                     if (mas[i] % 2 == 0) {
                         if (pos1 == -1) pos1 = i;
@@ -205,9 +197,7 @@ public class LaboratorThreads {
         }
     }
 
-    // ---------------------------------------------------
-    //          THREAD CALCULE (TH3, TH4)
-    // ---------------------------------------------------
+  //CLASA THREADCALCULE-VADIM
     static class ThreadCalcule extends Thread {
         int startIndex, endIndex;
         int[] mas;
@@ -227,7 +217,7 @@ public class LaboratorThreads {
             printToGUI(nameThread + " a început execuția.\n");
 
             if (nameThread.equals("Th3")) {
-                // PARCURGERE ÎNAINTE — INTERVAL [120, 690]
+
                 for (int i = startIndex; i <= endIndex; i++) {
                     if (mas[i] >= 120 && mas[i] <= 690) {
                         printToGUI(nameThread + " -> " + mas[i] + " (poz: " + i + ")\n");
@@ -236,7 +226,7 @@ public class LaboratorThreads {
             }
 
             if (nameThread.equals("Th4")) {
-                // PARCURGERE INVERSĂ — INTERVAL [1000, 1567]
+
                 for (int i = endIndex; i >= startIndex; i--) {
                     if (mas[i] >= 1000 && mas[i] <= 1567) {
                         printToGUI(nameThread + " -> " + mas[i] + " (poz: " + i + ")\n");
