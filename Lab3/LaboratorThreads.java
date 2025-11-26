@@ -117,21 +117,29 @@ public class LaboratorThreads {
     }
 
     private static void displayInOrder(String threadName, String text) {
+
         while (currentDisplay < DISPLAY_ORDER.length &&
                 !DISPLAY_ORDER[currentDisplay].equals(threadName)) {
             try { Thread.sleep(10); }
             catch (InterruptedException e) { e.printStackTrace(); }
         }
 
-        try { guiDisplayQueue.put(threadName + ": " + text); }
-        catch (InterruptedException e) { e.printStackTrace(); }
+        SwingUtilities.invokeLater(() -> gui.appendText(threadName + ": "));
+
+        for (char c : text.toCharArray()) {
+            final String letter = String.valueOf(c);
+            SwingUtilities.invokeLater(() -> gui.appendText(letter));
+            try { Thread.sleep(100); } // pauză între litere
+            catch (InterruptedException e) { e.printStackTrace(); }
+        }
+
+        SwingUtilities.invokeLater(() -> gui.appendText("\n"));
 
         currentDisplay++;
     }
 
 
-
-    //clasa threadcalc-efectuat de CRUC MAXIM
+    //clasa threadcalc - CRUC MAXIM
     static class ThreadCalc extends Thread {
         int startIndex, endIndex;
         int[] mas;
@@ -197,7 +205,7 @@ public class LaboratorThreads {
         }
     }
 
-  //CLASA THREADCALCULE-VADIM
+    //clasa threadcalcule - COTOMAN VADIM
     static class ThreadCalcule extends Thread {
         int startIndex, endIndex;
         int[] mas;
@@ -217,7 +225,6 @@ public class LaboratorThreads {
             printToGUI(nameThread + " a început execuția.\n");
 
             if (nameThread.equals("Th3")) {
-
                 for (int i = startIndex; i <= endIndex; i++) {
                     if (mas[i] >= 120 && mas[i] <= 690) {
                         printToGUI(nameThread + " -> " + mas[i] + " (poz: " + i + ")\n");
@@ -226,7 +233,6 @@ public class LaboratorThreads {
             }
 
             if (nameThread.equals("Th4")) {
-
                 for (int i = endIndex; i >= startIndex; i--) {
                     if (mas[i] >= 1000 && mas[i] <= 1567) {
                         printToGUI(nameThread + " -> " + mas[i] + " (poz: " + i + ")\n");
