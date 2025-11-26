@@ -46,8 +46,7 @@ public class LaboratorThreads {
         gui = new Lab3GUI("Laborator PCD - CR_232");
 
         System.out.println("=== LABORATOR CR-232 ===");
-        System.out.println("Echipa: Cruc Maxim Cotoman si Cotoman Vadim");
-        System.out.println();
+        System.out.println("Echipa: Cruc Maxim Cotoman si Cotoman Vadim\n");
 
         mas = new int[100];
         gui.appendText("Tablou generat (10 linii x 10 coloane):\n");
@@ -56,15 +55,10 @@ public class LaboratorThreads {
         for (int i = 0; i < mas.length; i++) {
             mas[i] = rand.nextInt(1448) + 120;
 
-            if (mas[i] < 1000) {
-                gui.appendText(" " + mas[i] + " ");
-            } else {
-                gui.appendText(mas[i] + " ");
-            }
+            if (mas[i] < 1000) gui.appendText(" " + mas[i] + " ");
+            else gui.appendText(mas[i] + " ");
 
-            if ((i + 1) % 10 == 0) {
-                gui.appendText("\n");
-            }
+            if ((i + 1) % 10 == 0) gui.appendText("\n");
         }
         gui.appendText("\n");
 
@@ -78,31 +72,26 @@ public class LaboratorThreads {
         System.out.println("Starting Thread 4");
         System.out.println();
 
-        ThreadCalc th1 = new ThreadCalc(0, 49, mas, "Th1", gui);
-        ThreadCalc th2 = new ThreadCalc(50, 99, mas, "Th2", gui);
-        ThreadCalcule th3 = new ThreadCalcule(0, 49, mas, "Th3", gui);
-        ThreadCalcule th4 = new ThreadCalcule(50, 99, mas, "Th4", gui);
+        ThreadCalc th1 = new ThreadCalc(0, 99, mas, "Th1", gui);
+        ThreadCalc th2 = new ThreadCalc(0, 99, mas, "Th2", gui);
+        ThreadCalcule th3 = new ThreadCalcule(0, 99, mas, "Th3", gui);
+        ThreadCalcule th4 = new ThreadCalcule(0, 99, mas, "Th4", gui);
 
         th1.start();
         th2.start();
         th3.start();
         th4.start();
 
-
         th1.join();
         th2.join();
         th3.join();
         th4.join();
 
-
         Thread.sleep(500);
         displayThreadRunning = false;
-        try {
-            guiDisplayQueue.put("STOP");
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
 
+        try { guiDisplayQueue.put("STOP"); }
+        catch (InterruptedException e) { e.printStackTrace(); }
 
         gui.appendText("\nToate firele de execuție s-au încheiat.\n");
         System.out.println("\nToate firele de execuție s-au încheiat.");
@@ -111,26 +100,10 @@ public class LaboratorThreads {
     private static void printArray(int[] array) {
         for (int i = 0; i < array.length; i++) {
             System.out.print(array[i] + " ");
-            if ((i + 1) % 10 == 0) {
-                System.out.println();
-            }
+            if ((i + 1) % 10 == 0) System.out.println();
         }
         System.out.println();
     }
-
-
-    private static void printWithDelayConsole(String text, int delay) {
-        for (char c : text.toCharArray()) {
-            System.out.print(c);
-            try {
-                Thread.sleep(delay);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
-        System.out.println();
-    }
-
 
     private static synchronized void threadFinished() {
         finishedThreads++;
@@ -138,35 +111,20 @@ public class LaboratorThreads {
 
     private static void waitForAllThreads() {
         while (finishedThreads < 4) {
-            try {
-                Thread.sleep(10);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+            try { Thread.sleep(10); }
+            catch (InterruptedException e) { e.printStackTrace(); }
         }
     }
 
     private static void displayInOrder(String threadName, String text) {
         while (currentDisplay < DISPLAY_ORDER.length &&
                 !DISPLAY_ORDER[currentDisplay].equals(threadName)) {
-            try {
-                Thread.sleep(10);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+            try { Thread.sleep(10); }
+            catch (InterruptedException e) { e.printStackTrace(); }
         }
 
-        // Afișare în GUI - folosind coada pentru ordonare
-        String guiText = threadName + ": " + text;
-        try {
-            guiDisplayQueue.put(guiText);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-
-        // Afișare în consolă - cu delay
-        System.out.print(threadName + ": ");
-        printWithDelayConsole(text, 100);
+        try { guiDisplayQueue.put(threadName + ": " + text); }
+        catch (InterruptedException e) { e.printStackTrace(); }
 
         currentDisplay++;
     }
@@ -177,105 +135,9 @@ public class LaboratorThreads {
         }
     }
 
-
-    static class ThreadCalcule extends Thread {
-        int startIndex, endIndex;
-        int[] mas;
-        String nameThread;
-        Lab3GUI gui;
-
-        public ThreadCalcule(int startIndex, int endIndex, int[] mas, String nameThread, Lab3GUI gui) {
-            this.startIndex = startIndex;
-            this.endIndex = endIndex;
-            this.mas = mas;
-            this.nameThread = nameThread;
-            this.gui = gui;
-        }
-
-        @Override
-        public void run() {
-            int S1 = 0, S2 = 0, k = 0;
-            int count = 0;
-
-            printToGUI(nameThread + " a început execuția pe intervalul [" + startIndex + ", " + endIndex + "]\n");
-
-            for (int i = startIndex; i <= endIndex; i++) {
-                try {
-                    Thread.yield();
-                    Thread.sleep((int) (Math.random() * 40 + 10));
-                } catch (InterruptedException e) {
-                    if (Thread.interrupted()) {
-                        printToGUI(nameThread + " a fost întrerupt și se încheie.\n");
-                        return;
-                    }
-                    e.printStackTrace();
-                }
-
-                if (isThreadActive()) {
-                    if (mas[i] >= 120 && mas[i] <= 690 && mas[i] % 2 == 0) {
-                        if (k == 0) {
-                            S1 = mas[i];
-                            k++;
-                        } else {
-                            S2 = mas[i];
-                            int S = S1 + S2;
-                            count++;
-                            printToGUI(nameThread + " -> Suma " + count + ": " + S1 + " + " + S2 + " = " + S +
-                                    " (poziții: " + findFirstPosition(S1, i) + ", " + i + ")\n");
-                            S1 = S2 = 0;
-                            k = 0;
-                        }
-                    }
-                }
-            }
-
-            if (k == 1) {
-                printToGUI(nameThread + " -> Valoare pară rămasă singură: " + S1 + " (poziție: " + findFirstPosition(S1, endIndex) + ")\n");
-            }
-
-            LaboratorThreads.appendTextWithLock(nameThread + " -> Total sume calculate: " + count + "\n");
-            printToGUI(nameThread + " a terminat execuția.\n");
-
-            threadFinished();
-            waitForAllThreads();
-
-            if (nameThread.equals("Th3")) {
-                displayInOrder(nameThread, DISCIPLINA);
-            } else if (nameThread.equals("Th4")) {
-                displayInOrder(nameThread, GRUPA);
-            }
-        }
-
-        private boolean isThreadActive() {
-            Thread currentThread = Thread.currentThread();
-            return currentThread.isAlive() && !currentThread.isInterrupted();
-        }
-
-        private void printToGUI(String text) {
-            try {
-                Thread.sleep(1);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-
-            if (Math.random() > 0.5) {
-                SwingUtilities.invokeLater(() -> gui.appendText(text));
-            } else {
-                LaboratorThreads.appendTextWithLock(text);
-            }
-        }
-
-        private int findFirstPosition(int value, int currentIndex) {
-            for (int i = startIndex; i <= currentIndex; i++) {
-                Thread.yield();
-                if (mas[i] == value) {
-                    return i;
-                }
-            }
-            return currentIndex - 1;
-        }
-    }
-
+    // ---------------------------------------------------
+    //                THREAD CALC (TH1, TH2)
+    // ---------------------------------------------------
     static class ThreadCalc extends Thread {
         int startIndex, endIndex;
         int[] mas;
@@ -292,84 +154,107 @@ public class LaboratorThreads {
 
         @Override
         public void run() {
-            int S1 = 0, S2 = 0, k = 0;
-            int count = 0;
+            printToGUI(nameThread + " a început execuția.\n");
 
-            printToGUI(nameThread + " a început execuția pe intervalul [" + startIndex + ", " + endIndex + "]\n");
+            int pos1 = -1, pos2 = -1, count = 0;
 
-            for (int i = startIndex; i <= endIndex; i++) {
-                try {
-                    Thread.yield();
-                    Thread.sleep((int) (Math.random() * 40 + 10));
-                } catch (InterruptedException e) {
-                    if (Thread.interrupted()) {
-                        printToGUI(nameThread + " a fost întrerupt.\n");
-                        return;
-                    }
-                    e.printStackTrace();
-                }
-
-                if (isThreadValid()) {
-                    if (mas[i] >= 1000 && mas[i] <= 1567 && mas[i] % 2 == 0) {
-                        if (k == 0) {
-                            S1 = mas[i];
-                            k++;
-                        } else {
-                            S2 = mas[i];
-                            int S = S1 + S2;
+            if (nameThread.equals("Th1")) {
+                // PARCURGERE ÎNAINTE
+                for (int i = startIndex; i <= endIndex; i++) {
+                    if (mas[i] % 2 == 0) {
+                        if (pos1 == -1) pos1 = i;
+                        else {
+                            pos2 = i;
                             count++;
-                            printToGUI(nameThread + " -> Suma " + count + ": " + S1 + " + " + S2 + " = " + S +
-                                    " (poziții: " + findFirstPosition(S1, i) + ", " + i + ")\n");
-                            S1 = S2 = 0;
-                            k = 0;
+                            printToGUI(nameThread + " -> Suma pozițiilor " + count +
+                                    ": " + pos1 + " + " + pos2 + " = " + (pos1 + pos2) + "\n");
+                            pos1 = pos2 = -1;
                         }
                     }
                 }
             }
 
-            if (k == 1) {
-                printToGUI(nameThread + " -> Valoare pară rămasă singură: " + S1 + " (poziție: " + findFirstPosition(S1, endIndex) + ")\n");
+            if (nameThread.equals("Th2")) {
+                // PARCURGERE INVERSĂ
+                for (int i = endIndex; i >= startIndex; i--) {
+                    if (mas[i] % 2 == 0) {
+                        if (pos1 == -1) pos1 = i;
+                        else {
+                            pos2 = i;
+                            count++;
+                            printToGUI(nameThread + " -> Suma pozițiilor " + count +
+                                    ": " + pos1 + " + " + pos2 + " = " + (pos1 + pos2) + "\n");
+                            pos1 = pos2 = -1;
+                        }
+                    }
+                }
             }
 
-            LaboratorThreads.appendTextWithLock(nameThread + " -> Total sume calculate: " + count + "\n");
+            printToGUI(nameThread + " -> Total sume calculate: " + count + "\n");
             printToGUI(nameThread + " a terminat execuția.\n");
 
             threadFinished();
             waitForAllThreads();
 
-            if (nameThread.equals("Th1")) {
-                displayInOrder(nameThread, PRENUME_STUDENT);
-            } else if (nameThread.equals("Th2")) {
-                displayInOrder(nameThread, NUME_STUDENT);
-            }
-        }
-
-        private boolean isThreadValid() {
-            return Thread.currentThread().isAlive();
+            if (nameThread.equals("Th1")) displayInOrder(nameThread, PRENUME_STUDENT);
+            if (nameThread.equals("Th2")) displayInOrder(nameThread, NUME_STUDENT);
         }
 
         private void printToGUI(String text) {
-            try {
-                Thread.sleep(2);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
+            SwingUtilities.invokeLater(() -> gui.appendText(text));
+        }
+    }
 
-            if (Math.random() > 0.5) {
-                SwingUtilities.invokeLater(() -> gui.appendText(text));
-            } else {
-                LaboratorThreads.appendTextWithLock(text);
-            }
+    // ---------------------------------------------------
+    //          THREAD CALCULE (TH3, TH4)
+    // ---------------------------------------------------
+    static class ThreadCalcule extends Thread {
+        int startIndex, endIndex;
+        int[] mas;
+        String nameThread;
+        Lab3GUI gui;
+
+        public ThreadCalcule(int startIndex, int endIndex, int[] mas, String nameThread, Lab3GUI gui) {
+            this.startIndex = startIndex;
+            this.endIndex = endIndex;
+            this.mas = mas;
+            this.nameThread = nameThread;
+            this.gui = gui;
         }
 
-        private int findFirstPosition(int value, int currentIndex) {
-            for (int i = startIndex; i <= currentIndex; i++) {
-                Thread.yield();
-                if (mas[i] == value) {
-                    return i;
+        @Override
+        public void run() {
+            printToGUI(nameThread + " a început execuția.\n");
+
+            if (nameThread.equals("Th3")) {
+                // PARCURGERE ÎNAINTE — INTERVAL [120, 690]
+                for (int i = startIndex; i <= endIndex; i++) {
+                    if (mas[i] >= 120 && mas[i] <= 690) {
+                        printToGUI(nameThread + " -> " + mas[i] + " (poz: " + i + ")\n");
+                    }
                 }
             }
-            return currentIndex - 1;
+
+            if (nameThread.equals("Th4")) {
+                // PARCURGERE INVERSĂ — INTERVAL [1000, 1567]
+                for (int i = endIndex; i >= startIndex; i--) {
+                    if (mas[i] >= 1000 && mas[i] <= 1567) {
+                        printToGUI(nameThread + " -> " + mas[i] + " (poz: " + i + ")\n");
+                    }
+                }
+            }
+
+            printToGUI(nameThread + " a terminat execuția.\n");
+
+            threadFinished();
+            waitForAllThreads();
+
+            if (nameThread.equals("Th3")) displayInOrder(nameThread, DISCIPLINA);
+            if (nameThread.equals("Th4")) displayInOrder(nameThread, GRUPA);
+        }
+
+        private void printToGUI(String text) {
+            SwingUtilities.invokeLater(() -> gui.appendText(text));
         }
     }
 }
