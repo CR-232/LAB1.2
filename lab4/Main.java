@@ -44,9 +44,9 @@ class Producer extends Thread {
     }
 
 
-    public void pune(int nr) {
-        depozit.pune(nr);
-        gui.log("Producător " + id + " a pus produs: " + nr);
+    public void pune(int nr1, int nr2) {
+        depozit.pune(nr1, nr2);
+        gui.log("Producător " + id + " a pus produsele: " + nr1 + " și " + nr2);
     }
 
     public void run() {
@@ -61,8 +61,7 @@ class Producer extends Thread {
 
             gui.log("Producător " + id + " a generat: " + nr1 + " și " + nr2);
 
-            pune(nr1);
-            pune(nr2);
+            pune(nr1, nr2);
 
             try {
                 Thread.sleep(random.nextInt(300) + 100);
@@ -158,8 +157,9 @@ class Depozit {
         return totalProduse >= totalNecesar;
     }
 
-    public synchronized void pune(int nr) {
-        while (cantitate >= D) {
+    public synchronized void pune(int nr1, int nr2) {
+        // Așteaptă până când sunt cel puțin 2 locuri libere în depozit
+        while (cantitate >= D - 1) {
             try {
                 wait();
             } catch (InterruptedException e) {}
@@ -170,7 +170,14 @@ class Depozit {
             return;
         }
 
-        buffer[pozitieScrie] = nr;
+        // Pune primul produs
+        buffer[pozitieScrie] = nr1;
+        pozitieScrie = (pozitieScrie + 1) % D;
+        cantitate++;
+        totalProduse++;
+
+        // Pune al doilea produs
+        buffer[pozitieScrie] = nr2;
         pozitieScrie = (pozitieScrie + 1) % D;
         cantitate++;
         totalProduse++;
