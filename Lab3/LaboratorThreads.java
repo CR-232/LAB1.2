@@ -1,7 +1,5 @@
 import javax.swing.SwingUtilities;
 import java.util.Random;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 
 public class LaboratorThreads {
 
@@ -20,26 +18,6 @@ public class LaboratorThreads {
     private static final String[] DISPLAY_ORDER = {
             "Th2", "Th4", "Th1", "Th3"
     };
-
-    private static BlockingQueue<String> guiDisplayQueue = new LinkedBlockingQueue<>();
-    private static volatile boolean displayThreadRunning = true;
-    private static Thread displayThread;
-
-    static {
-        displayThread = new Thread(() -> {
-            while (displayThreadRunning || !guiDisplayQueue.isEmpty()) {
-                try {
-                    String text = guiDisplayQueue.take();
-                    if (text.equals("STOP")) break;
-
-                    SwingUtilities.invokeLater(() -> gui.appendText(text + "\n"));
-                } catch (InterruptedException e) {
-                    break;
-                }
-            }
-        });
-        displayThread.start();
-    }
 
     public static void main(String[] args) throws InterruptedException {
 
@@ -88,10 +66,6 @@ public class LaboratorThreads {
         th4.join();
 
         Thread.sleep(500);
-        displayThreadRunning = false;
-
-        try { guiDisplayQueue.put("STOP"); }
-        catch (InterruptedException e) { e.printStackTrace(); }
 
         gui.appendText("\nToate firele de execuție s-au încheiat.\n");
         System.out.println("\nToate firele de execuție s-au încheiat.");
@@ -117,7 +91,6 @@ public class LaboratorThreads {
     }
 
     private static void displayInOrder(String threadName, String text) {
-
         while (currentDisplay < DISPLAY_ORDER.length &&
                 !DISPLAY_ORDER[currentDisplay].equals(threadName)) {
             try { Thread.sleep(10); }
@@ -129,7 +102,7 @@ public class LaboratorThreads {
         for (char c : text.toCharArray()) {
             final String letter = String.valueOf(c);
             SwingUtilities.invokeLater(() -> gui.appendText(letter));
-            try { Thread.sleep(100); } // pauză între litere
+            try { Thread.sleep(100); }
             catch (InterruptedException e) { e.printStackTrace(); }
         }
 
@@ -138,8 +111,7 @@ public class LaboratorThreads {
         currentDisplay++;
     }
 
-
-    //clasa threadcalc - CRUC MAXIM
+    //CLASA ThreadCalc - MAXIM
     static class ThreadCalc extends Thread {
         int startIndex, endIndex;
         int[] mas;
@@ -205,7 +177,7 @@ public class LaboratorThreads {
         }
     }
 
-    //clasa threadcalcule - COTOMAN VADIM
+    //CLASA ThreadCalcule - VADIM
     static class ThreadCalcule extends Thread {
         int startIndex, endIndex;
         int[] mas;
