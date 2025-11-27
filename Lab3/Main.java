@@ -1,7 +1,7 @@
 import javax.swing.SwingUtilities;
 import java.util.Random;
 
-public class LaboratorThreads {
+public class Main {
 
     private static final String NUME_STUDENT = "Cruc,Cotoman";
     private static final String PRENUME_STUDENT = "Maxim,Vadim";
@@ -18,6 +18,9 @@ public class LaboratorThreads {
     private static final String[] DISPLAY_ORDER = {
             "Th2", "Th4", "Th1", "Th3"
     };
+
+    private static ThreadCalc th1, th2;
+    private static ThreadCalcule th3, th4;
 
     public static void main(String[] args) throws InterruptedException {
 
@@ -50,10 +53,10 @@ public class LaboratorThreads {
         System.out.println("Starting Thread 4");
         System.out.println();
 
-        ThreadCalc th1 = new ThreadCalc(0, 99, mas, "Th1", gui);
-        ThreadCalc th2 = new ThreadCalc(0, 99, mas, "Th2", gui);
-        ThreadCalcule th3 = new ThreadCalcule(0, 99, mas, "Th3", gui);
-        ThreadCalcule th4 = new ThreadCalcule(0, 99, mas, "Th4", gui);
+        th1 = new ThreadCalc(0, 99, mas, "Th1", gui);
+        th2 = new ThreadCalc(0, 99, mas, "Th2", gui);
+        th3 = new ThreadCalcule(0, 99, mas, "Th3", gui);
+        th4 = new ThreadCalcule(0, 99, mas, "Th4", gui);
 
         th1.start();
         th2.start();
@@ -83,13 +86,6 @@ public class LaboratorThreads {
         finishedThreads++;
     }
 
-    private static void waitForAllThreads() {
-        while (finishedThreads < 4) {
-            try { Thread.sleep(10); }
-            catch (InterruptedException e) { e.printStackTrace(); }
-        }
-    }
-
     private static void displayInOrder(String threadName, String text) {
         while (currentDisplay < DISPLAY_ORDER.length &&
                 !DISPLAY_ORDER[currentDisplay].equals(threadName)) {
@@ -111,7 +107,7 @@ public class LaboratorThreads {
         currentDisplay++;
     }
 
-    //CLASA ThreadCalc - MAXIM
+    //Clasa ThreadCalc - Maxim
     static class ThreadCalc extends Thread {
         int startIndex, endIndex;
         int[] mas;
@@ -142,6 +138,8 @@ public class LaboratorThreads {
                             printToGUI(nameThread + " -> Suma pozițiilor " + count +
                                     ": " + pos1 + " + " + pos2 + " = " + (pos1 + pos2) + "\n");
                             pos1 = pos2 = -1;
+                            try { Thread.sleep(50); }
+                            catch (InterruptedException e) { e.printStackTrace(); }
                         }
                     }
                 }
@@ -157,6 +155,8 @@ public class LaboratorThreads {
                             printToGUI(nameThread + " -> Suma pozițiilor " + count +
                                     ": " + pos1 + " + " + pos2 + " = " + (pos1 + pos2) + "\n");
                             pos1 = pos2 = -1;
+                            try { Thread.sleep(50); }
+                            catch (InterruptedException e) { e.printStackTrace(); }
                         }
                     }
                 }
@@ -166,10 +166,40 @@ public class LaboratorThreads {
             printToGUI(nameThread + " a terminat execuția.\n");
 
             threadFinished();
-            waitForAllThreads();
+            waitForAllThreadsWithThreadMethods();
+            coordinateWithOtherThreads();
 
             if (nameThread.equals("Th1")) displayInOrder(nameThread, PRENUME_STUDENT);
             if (nameThread.equals("Th2")) displayInOrder(nameThread, NUME_STUDENT);
+        }
+
+        private void waitForAllThreadsWithThreadMethods() {
+            while (finishedThreads < 4) {
+                try {
+                    Thread.sleep(10);
+                }
+                catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+        }
+
+        private void coordinateWithOtherThreads() {
+            if (nameThread.equals("Th1")) {
+                try {
+                    if (th2 != null && th2.isAlive()) {
+                        th2.join(1000);
+                    }
+                } catch (InterruptedException e) {}
+            }
+
+            if (nameThread.equals("Th2")) {
+                try {
+                    if (th4 != null && th4.isAlive()) {
+                        th4.join(1000);
+                    }
+                } catch (InterruptedException e) {}
+            }
         }
 
         private void printToGUI(String text) {
@@ -177,7 +207,7 @@ public class LaboratorThreads {
         }
     }
 
-    //CLASA ThreadCalcule - VADIM
+    //CLASA ThreadCalcule - Vadim
     static class ThreadCalcule extends Thread {
         int startIndex, endIndex;
         int[] mas;
@@ -200,6 +230,8 @@ public class LaboratorThreads {
                 for (int i = startIndex; i <= endIndex; i++) {
                     if (mas[i] >= 120 && mas[i] <= 690) {
                         printToGUI(nameThread + " -> " + mas[i] + " (poz: " + i + ")\n");
+                        try { Thread.sleep(30); }
+                        catch (InterruptedException e) { e.printStackTrace(); }
                     }
                 }
             }
@@ -208,6 +240,8 @@ public class LaboratorThreads {
                 for (int i = endIndex; i >= startIndex; i--) {
                     if (mas[i] >= 1000 && mas[i] <= 1567) {
                         printToGUI(nameThread + " -> " + mas[i] + " (poz: " + i + ")\n");
+                        try { Thread.sleep(30); }
+                        catch (InterruptedException e) { e.printStackTrace(); }
                     }
                 }
             }
@@ -215,10 +249,45 @@ public class LaboratorThreads {
             printToGUI(nameThread + " a terminat execuția.\n");
 
             threadFinished();
-            waitForAllThreads();
+            waitForAllThreadsWithThreadMethods();
+            coordinateWithOtherThreads();
 
             if (nameThread.equals("Th3")) displayInOrder(nameThread, DISCIPLINA);
             if (nameThread.equals("Th4")) displayInOrder(nameThread, GRUPA);
+        }
+
+        private void waitForAllThreadsWithThreadMethods() {
+            while (finishedThreads < 4) {
+                try {
+                    Thread.sleep(10);
+                    if (th1 != null && th2 != null && th3 != null && th4 != null) {
+                        if (!th1.isAlive() && !th2.isAlive() && !th3.isAlive() && !th4.isAlive()) {
+                            break;
+                        }
+                    }
+                }
+                catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+        }
+
+        private void coordinateWithOtherThreads() {
+            if (nameThread.equals("Th3")) {
+                try {
+                    if (th1 != null && th1.isAlive()) th1.join(500);
+                    if (th2 != null && th2.isAlive()) th2.join(500);
+                    if (th4 != null && th4.isAlive()) th4.join(500);
+                } catch (InterruptedException e) {}
+            }
+
+            if (nameThread.equals("Th4")) {
+                try {
+                    if (th2 != null && th2.isAlive()) {
+                        th2.join(1000);
+                    }
+                } catch (InterruptedException e) {}
+            }
         }
 
         private void printToGUI(String text) {
