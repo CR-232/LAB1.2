@@ -1,4 +1,4 @@
-import javax.swing.SwingUtilities;
+import javax.swing.*;
 import java.util.Random;
 
 public class Main {
@@ -6,292 +6,315 @@ public class Main {
     private static final String NUME_STUDENT = "Cruc,Cotoman";
     private static final String PRENUME_STUDENT = "Maxim,Vadim";
     private static final String GRUPA = "CR-232";
-    private static final String DISCIPLINA = "Programarea concurentă și distribuită";
+    private static final String DISCIPLINA = "Programarea concurenta si distribuita";
 
-    private static int[] mas;
+    private static int[] array;
     private static Lab3GUI gui;
-    private static final Object lock = new Object();
+    private static Random rand = new Random();
 
-    private static volatile int finishedThreads = 0;
-    private static volatile int currentDisplay = 0;
+    // Flag-uri pentru a ști când thread-urile au terminat
+    private static boolean th1Done = false;
+    private static boolean th2Done = false;
+    private static boolean th3Done = false;
+    private static boolean th4Done = false;
 
-    private static final String[] DISPLAY_ORDER = {
-            "Th2", "Th4", "Th1", "Th3"
-    };
+    // Flag-uri pentru a controla ordinea afișării
+    private static boolean th2CanPrint = false;
+    private static boolean th4CanPrint = false;
+    private static boolean th1CanPrint = false;
+    private static boolean th3CanPrint = false;
 
-    private static ThreadCalc th1, th2;
-    private static ThreadCalcule th3, th4;
+    // Firele de execuție - păstrăm denumirile scurte pentru thread-uri
+    static Thread Th1 = new ThreadSumaPareInceput();
+    static Thread Th2 = new ThreadSumaPareSfarsit();
+    static Thread Th3 = new ThreadParcurgereCrescator();
+    static Thread Th4 = new ThreadParcurgereDescrescator();
 
-    public static void main(String[] args) throws InterruptedException {
+    public static void main(String[] args) {
+        gui = new Lab3GUI("Laborator PCD - Varianta 2");
+        gui.appendText("=== LABORATOR PCD - VARIANTA 2 ===\n\n");
 
-        gui = new Lab3GUI("Laborator PCD - CR_232");
+        // Generare array cu valori între 120-1567
+        array = new int[100];
+        gui.appendText("Array generat (valori 120-1567):\n");
 
-        System.out.println("=== LABORATOR CR-232 ===");
-        System.out.println("Echipa: Cruc Maxim Cotoman si Cotoman Vadim\n");
-
-        mas = new int[100];
-        gui.appendText("Tablou generat (10 linii x 10 coloane):\n");
-        Random rand = new Random();
-
-        for (int i = 0; i < mas.length; i++) {
-            mas[i] = rand.nextInt(1448) + 120;
-
-            if (mas[i] < 1000) gui.appendText(" " + mas[i] + " ");
-            else gui.appendText(mas[i] + " ");
-
+        for (int i = 0; i < array.length; i++) {
+            array[i] = rand.nextInt(1448) + 120;
+            gui.appendText(array[i] + " ");
             if ((i + 1) % 10 == 0) gui.appendText("\n");
         }
-        gui.appendText("\n");
+        gui.appendText("\n=== PORNIRE FIRE DE EXECUȚIE ===\n");
 
-        System.out.println("Array generat:");
-        printArray(mas);
-        System.out.println();
+        // Setăm numele thread-urilor - metoda setName()
+        Th1.setName("Th1");
+        Th2.setName("Th2");
+        Th3.setName("Th3");
+        Th4.setName("Th4");
 
-        System.out.println("Starting Thread 1");
-        System.out.println("Starting Thread 2");
-        System.out.println("Starting Thread 3");
-        System.out.println("Starting Thread 4");
-        System.out.println();
-
-        th1 = new ThreadCalc(0, 99, mas, "Th1", gui);
-        th2 = new ThreadCalc(0, 99, mas, "Th2", gui);
-        th3 = new ThreadCalcule(0, 99, mas, "Th3", gui);
-        th4 = new ThreadCalcule(0, 99, mas, "Th4", gui);
-
-        th1.start();
-        th2.start();
-        th3.start();
-        th4.start();
-
-        th1.join();
-        th2.join();
-        th3.join();
-        th4.join();
-
-        Thread.sleep(500);
-
-        gui.appendText("\nToate firele de execuție s-au încheiat.\n");
-        System.out.println("\nToate firele de execuție s-au încheiat.");
+        // Pornim thread-urile - metoda start()
+        Th1.start();
+        Th2.start();
+        Th3.start();
+        Th4.start();
     }
 
-    private static void printArray(int[] array) {
-        for (int i = 0; i < array.length; i++) {
-            System.out.print(array[i] + " ");
-            if ((i + 1) % 10 == 0) System.out.println();
+    // Afișează text caracter cu caracter cu pauză de 100ms
+    public static void afisare(String text) {
+        try {
+            for (char c : text.toCharArray()) {
+                Thread.sleep(100); // metoda sleep()
+                gui.appendText(String.valueOf(c));
+            }
+            gui.appendText("\n");
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
-        System.out.println();
     }
 
-    private static synchronized void threadFinished() {
-        finishedThreads++;
-    }
-
-    private static void displayInOrder(String threadName, String text) {
-        while (currentDisplay < DISPLAY_ORDER.length &&
-                !DISPLAY_ORDER[currentDisplay].equals(threadName)) {
-            try { Thread.sleep(10); }
-            catch (InterruptedException e) { e.printStackTrace(); }
-        }
-
-        SwingUtilities.invokeLater(() -> gui.appendText(threadName + ": "));
-
-        for (char c : text.toCharArray()) {
-            final String letter = String.valueOf(c);
-            SwingUtilities.invokeLater(() -> gui.appendText(letter));
-            try { Thread.sleep(100); }
-            catch (InterruptedException e) { e.printStackTrace(); }
-        }
-
-        SwingUtilities.invokeLater(() -> gui.appendText("\n"));
-
-        currentDisplay++;
-    }
-
-    //Clasa ThreadCalc - Maxim
-    static class ThreadCalc extends Thread {
-        int startIndex, endIndex;
-        int[] mas;
-        String nameThread;
-        Lab3GUI gui;
-
-        public ThreadCalc(int startIndex, int endIndex, int[] mas, String nameThread, Lab3GUI gui) {
-            this.startIndex = startIndex;
-            this.endIndex = endIndex;
-            this.mas = mas;
-            this.nameThread = nameThread;
-            this.gui = gui;
-        }
-
-        @Override
+    // ==================== THREAD 1 ====================
+    static class ThreadSumaPareInceput extends Thread {
         public void run() {
-            printToGUI(nameThread + " a început execuția.\n");
+            gui.appendText("Th1 - Suma pozițiilor numerelor pare două câte două de la început\n");
 
-            int pos1 = -1, pos2 = -1, count = 0;
+            int S = 0, C = 0, s1 = 0, s2 = 0, pair = 0;
+            int numar1 = 0, numar2 = 0, pozitie1 = 0, pozitie2 = 0;
 
-            if (nameThread.equals("Th1")) {
-                for (int i = startIndex; i <= endIndex; i++) {
-                    if (mas[i] % 2 == 0) {
-                        if (pos1 == -1) pos1 = i;
-                        else {
-                            pos2 = i;
-                            count++;
-                            printToGUI(nameThread + " -> Suma pozițiilor " + count +
-                                    ": " + pos1 + " + " + pos2 + " = " + (pos1 + pos2) + "\n");
-                            pos1 = pos2 = -1;
-                            try { Thread.sleep(50); }
-                            catch (InterruptedException e) { e.printStackTrace(); }
-                        }
+            // Parcurge array-ul de la început
+            for (int i = 0; i < array.length; i++) {
+                if (array[i] % 2 == 0) { // element par
+                    S += i; // adaugă poziția
+                    C++;
+
+                    // Salvează numărul par și poziția sa
+                    if (C == 1) {
+                        numar1 = array[i];
+                        pozitie1 = i;
+                    } else if (C == 2) {
+                        numar2 = array[i];
+                        pozitie2 = i;
                     }
                 }
-            }
 
-            if (nameThread.equals("Th2")) {
-                for (int i = endIndex; i >= startIndex; i--) {
-                    if (mas[i] % 2 == 0) {
-                        if (pos1 == -1) pos1 = i;
-                        else {
-                            pos2 = i;
-                            count++;
-                            printToGUI(nameThread + " -> Suma pozițiilor " + count +
-                                    ": " + pos1 + " + " + pos2 + " = " + (pos1 + pos2) + "\n");
-                            pos1 = pos2 = -1;
-                            try { Thread.sleep(50); }
-                            catch (InterruptedException e) { e.printStackTrace(); }
-                        }
+                // La fiecare 2 elemente pare
+                if (C == 2) {
+                    pair++;
+                    if (pair == 1) {
+                        s1 = S;
+                    } else {
+                        s2 = S - s1;
+                        // Afișează numerele pare și suma lor
+                        gui.appendText(getName() + " → Numere pare: " + numar1 + " (poziția " + pozitie1 +
+                                ") și " + numar2 + " (poziția " + pozitie2 +
+                                ") - Suma pozițiilor = " + (s1 + s2) + "\n");
+                        pair = 0;
+                        s1 = 0;
                     }
+                    S = 0;
+                    C = 0;
+                    numar1 = 0;
+                    numar2 = 0;
+                    pozitie1 = 0;
+                    pozitie2 = 0;
                 }
-            }
 
-            printToGUI(nameThread + " -> Total sume calculate: " + count + "\n");
-            printToGUI(nameThread + " a terminat execuția.\n");
-
-            threadFinished();
-            waitForAllThreadsWithThreadMethods();
-            coordinateWithOtherThreads();
-
-            if (nameThread.equals("Th1")) displayInOrder(nameThread, PRENUME_STUDENT);
-            if (nameThread.equals("Th2")) displayInOrder(nameThread, NUME_STUDENT);
-        }
-
-        private void waitForAllThreadsWithThreadMethods() {
-            while (finishedThreads < 4) {
                 try {
-                    Thread.sleep(10);
-                }
-                catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
-            }
-        }
-
-        private void coordinateWithOtherThreads() {
-            if (nameThread.equals("Th1")) {
-                try {
-                    if (th2 != null && th2.isAlive()) {
-                        th2.join(1000);
-                    }
+                    Thread.sleep(rand.nextInt(50)); // metoda sleep() - pauză random
                 } catch (InterruptedException e) {}
             }
 
-            if (nameThread.equals("Th2")) {
+            // Dacă a rămas un număr par fără pereche
+            if (C == 1) {
+                gui.appendText(getName() + " → Număr par fără pereche: " + numar1 + " (poziția " + pozitie1 + ")\n");
+            }
+
+            gui.appendText("Th1 a terminat sarcinile principale\n");
+            th1Done = true; // Marchează că a terminat
+
+            // Așteaptă ca toate thread-urile să termine
+            while (!th2Done || !th3Done || !th4Done) {
                 try {
-                    if (th4 != null && th4.isAlive()) {
-                        th4.join(1000);
-                    }
+                    Thread.sleep(50); // metoda sleep()
                 } catch (InterruptedException e) {}
             }
-        }
 
-        private void printToGUI(String text) {
-            SwingUtilities.invokeLater(() -> gui.appendText(text));
+            // Așteaptă rândul să afișeze (după Th4)
+            while (!th1CanPrint) {
+                try {
+                    Thread.sleep(50); // metoda sleep()
+                } catch (InterruptedException e) {}
+            }
+
+            // Afișează prenumele - metoda currentThread()
+            Main.afisare(Thread.currentThread().getName() + ": " + PRENUME_STUDENT);
+
+            // Dă permisiune lui Th3
+            th3CanPrint = true;
         }
     }
 
-    //CLASA ThreadCalcule - Vadim
-    static class ThreadCalcule extends Thread {
-        int startIndex, endIndex;
-        int[] mas;
-        String nameThread;
-        Lab3GUI gui;
-
-        public ThreadCalcule(int startIndex, int endIndex, int[] mas, String nameThread, Lab3GUI gui) {
-            this.startIndex = startIndex;
-            this.endIndex = endIndex;
-            this.mas = mas;
-            this.nameThread = nameThread;
-            this.gui = gui;
-        }
-
-        @Override
+    // ==================== THREAD 2 ====================
+    static class ThreadSumaPareSfarsit extends Thread {
         public void run() {
-            printToGUI(nameThread + " a început execuția.\n");
+            gui.appendText("Th2 - Suma pozițiilor numerelor pare două câte două de la sfârșit\n");
 
-            if (nameThread.equals("Th3")) {
-                for (int i = startIndex; i <= endIndex; i++) {
-                    if (mas[i] >= 120 && mas[i] <= 690) {
-                        printToGUI(nameThread + " -> " + mas[i] + " (poz: " + i + ")\n");
-                        try { Thread.sleep(30); }
-                        catch (InterruptedException e) { e.printStackTrace(); }
+            int S = 0, C = 0, s1 = 0, s2 = 0, pair = 0;
+            int numar1 = 0, numar2 = 0, pozitie1 = 0, pozitie2 = 0;
+
+            // Parcurge array-ul de la sfârșit
+            for (int i = array.length - 1; i >= 0; i--) {
+                if (array[i] % 2 == 0) { // element par
+                    S += i; // adaugă poziția
+                    C++;
+
+                    // Salvează numărul par și poziția sa
+                    if (C == 1) {
+                        numar1 = array[i];
+                        pozitie1 = i;
+                    } else if (C == 2) {
+                        numar2 = array[i];
+                        pozitie2 = i;
                     }
                 }
-            }
 
-            if (nameThread.equals("Th4")) {
-                for (int i = endIndex; i >= startIndex; i--) {
-                    if (mas[i] >= 1000 && mas[i] <= 1567) {
-                        printToGUI(nameThread + " -> " + mas[i] + " (poz: " + i + ")\n");
-                        try { Thread.sleep(30); }
-                        catch (InterruptedException e) { e.printStackTrace(); }
+                // La fiecare 2 elemente pare
+                if (C == 2) {
+                    pair++;
+                    if (pair == 1) {
+                        s1 = S;
+                    } else {
+                        s2 = S - s1;
+                        // Afișează numerele pare și suma lor
+                        gui.appendText(getName() + " → Numere pare: " + numar1 + " (poziția " + pozitie1 +
+                                ") și " + numar2 + " (poziția " + pozitie2 +
+                                ") - Suma pozițiilor = " + (s1 + s2) + "\n");
+                        pair = 0;
+                        s1 = 0;
                     }
+                    S = 0;
+                    C = 0;
+                    numar1 = 0;
+                    numar2 = 0;
+                    pozitie1 = 0;
+                    pozitie2 = 0;
                 }
-            }
 
-            printToGUI(nameThread + " a terminat execuția.\n");
+                Thread.yield(); // metoda yield() - cedează procesorul
 
-            threadFinished();
-            waitForAllThreadsWithThreadMethods();
-            coordinateWithOtherThreads();
-
-            if (nameThread.equals("Th3")) displayInOrder(nameThread, DISCIPLINA);
-            if (nameThread.equals("Th4")) displayInOrder(nameThread, GRUPA);
-        }
-
-        private void waitForAllThreadsWithThreadMethods() {
-            while (finishedThreads < 4) {
                 try {
-                    Thread.sleep(10);
-                    if (th1 != null && th2 != null && th3 != null && th4 != null) {
-                        if (!th1.isAlive() && !th2.isAlive() && !th3.isAlive() && !th4.isAlive()) {
-                            break;
-                        }
-                    }
-                }
-                catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
-            }
-        }
-
-        private void coordinateWithOtherThreads() {
-            if (nameThread.equals("Th3")) {
-                try {
-                    if (th1 != null && th1.isAlive()) th1.join(500);
-                    if (th2 != null && th2.isAlive()) th2.join(500);
-                    if (th4 != null && th4.isAlive()) th4.join(500);
+                    Thread.sleep(rand.nextInt(30)); // metoda sleep() - pauză random
                 } catch (InterruptedException e) {}
             }
 
-            if (nameThread.equals("Th4")) {
+            // Dacă a rămas un număr par fără pereche
+            if (C == 1) {
+                gui.appendText(getName() + " → Număr par fără pereche: " + numar1 + " (poziția " + pozitie1 + ")\n");
+            }
+
+            gui.appendText("Th2 a terminat sarcinile principale\n");
+            th2Done = true; // Marchează că a terminat
+
+            // Așteaptă ca toate thread-urile să termine
+            while (!th1Done || !th3Done || !th4Done) {
                 try {
-                    if (th2 != null && th2.isAlive()) {
-                        th2.join(1000);
-                    }
+                    Thread.sleep(50); // metoda sleep()
                 } catch (InterruptedException e) {}
             }
-        }
 
-        private void printToGUI(String text) {
-            SwingUtilities.invokeLater(() -> gui.appendText(text));
+            // Th2 afișează PRIMUL
+            th2CanPrint = true;
+            Main.afisare(getName() + ": " + NUME_STUDENT); // metoda getName()
+
+            // Dă permisiune lui Th4
+            th4CanPrint = true;
+        }
+    }
+
+    // ==================== THREAD 3 ====================
+    static class ThreadParcurgereCrescator extends Thread {
+        public void run() {
+            setPriority(Thread.MIN_PRIORITY + 1); // metoda setPriority()
+
+            gui.appendText("Th3 - Parcurgere [120, 690] de la început\n");
+
+            int count = 0;
+
+            // Parcurge array-ul de la început
+            for (int i = 0; i < array.length; i++) {
+                // Dacă valoarea e în interval [120, 690]
+                if (array[i] >= 120 && array[i] <= 690) {
+                    count++;
+                    gui.appendText("Th3 - Valoare " + count + ": array[" + i + "] = " + array[i] + "\n");
+                }
+
+                try {
+                    Thread.sleep(rand.nextInt(30)); // metoda sleep() - pauză random
+                } catch (InterruptedException e) {}
+            }
+
+            gui.appendText("Th3 a terminat sarcinile principale\n");
+            th3Done = true; // Marchează că a terminat
+
+            // Așteaptă ca toate thread-urile să termine
+            while (!th1Done || !th2Done || !th4Done) {
+                try {
+                    Thread.sleep(50); // metoda sleep()
+                } catch (InterruptedException e) {}
+            }
+
+            // Așteaptă rândul să afișeze (după Th1)
+            while (!th3CanPrint) {
+                try {
+                    Thread.sleep(50); // metoda sleep()
+                } catch (InterruptedException e) {}
+            }
+
+            Main.afisare(getName() + ": " + DISCIPLINA); // metoda getName()
+        }
+    }
+
+    // ==================== THREAD 4 ====================
+    static class ThreadParcurgereDescrescator extends Thread {
+        public void run() {
+            Thread.currentThread().getName(); // metoda currentThread() și getName()
+
+            gui.appendText("Th4 - Parcurgere [1000, 1567] de la sfârșit\n");
+
+            int count = 0;
+
+            // Parcurge array-ul de la sfârșit
+            for (int i = array.length - 1; i >= 0; i--) {
+                // Dacă valoarea e în interval [1000, 1567]
+                if (array[i] >= 1000 && array[i] <= 1567) {
+                    count++;
+                    gui.appendText("Th4 - Valoare " + count + ": array[" + i + "] = " + array[i] + "\n");
+                }
+
+                try {
+                    Thread.sleep(rand.nextInt(30)); // metoda sleep() - pauză random
+                } catch (InterruptedException e) {}
+            }
+
+            gui.appendText("Th4 a terminat sarcinile principale\n");
+            th4Done = true; // Marchează că a terminat
+
+            // Așteaptă ca toate thread-urile să termine
+            while (!th1Done || !th2Done || !th3Done) {
+                try {
+                    Thread.sleep(50); // metoda sleep()
+                } catch (InterruptedException e) {}
+            }
+
+            // Așteaptă rândul să afișeze (după Th2)
+            while (!th4CanPrint) {
+                try {
+                    Thread.sleep(50); // metoda sleep()
+                } catch (InterruptedException e) {}
+            }
+
+            Main.afisare(getName() + ": " + GRUPA); // metoda getName()
+
+            // Dă permisiune lui Th1
+            th1CanPrint = true;
         }
     }
 }
