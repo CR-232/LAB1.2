@@ -14,7 +14,6 @@ public class Main {
 
         Depozit depozit = new Depozit(D, Y, Z, gui);
 
-        // Create thread pool
         ExecutorService executor = Executors.newFixedThreadPool(7); // 3 producers + 4 consumers
 
         Producer p1 = new Producer(1, depozit, gui);
@@ -30,6 +29,7 @@ public class Main {
         executor.submit(p1);
         executor.submit(p2);
         executor.submit(p3);
+
         executor.submit(c1);
         executor.submit(c2);
         executor.submit(c3);
