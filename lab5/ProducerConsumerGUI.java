@@ -12,7 +12,7 @@ public class ProducerConsumerGUI extends JFrame {
 
         textArea = new JTextArea();
         textArea.setEditable(false);
-        textArea.setFont(new Font("Monospaced", Font.PLAIN, 13));
+        textArea.setFont(new Font("Monospaced", Font.PLAIN, 14));
 
         JScrollPane scrollPane = new JScrollPane(textArea);
         scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);

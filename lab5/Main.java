@@ -1,231 +1,196 @@
-import java.util.Random;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import javax.swing.*;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
-//CLASA DE BAZA - Main
 public class Main {
+    private static final int D = 5;
+    private static final int Y = 4;
+    private static final int Z = 2;
+    private static final int TOTAL_NEEDED = Y * Z;
+
+    private static final AtomicInteger totalProduced = new AtomicInteger(0);
+    private static final AtomicInteger totalConsumed = new AtomicInteger(0);
+    private static volatile boolean productionComplete = false;
+
+    private static final List<Integer> buffer = new ArrayList<>(D);
+    private static final Object lock = new Object();
+
     public static void main(String[] args) {
         ProducerConsumerGUI gui = new ProducerConsumerGUI();
 
-        int D = 5;
-        int Y = 4;
-        int Z = 2;
+        gui.log("=== LABORATOR NR.5 ===");
+        gui.log("Capacitate depozit (D): " + D);
+        gui.log("Numar consumatori (Y): " + Y);
+        gui.log("Produse/consumator (Z): " + Z);
+        gui.log("Total necesar: " + TOTAL_NEEDED);
+        gui.log("Producatori: 3");
+        gui.log("Fiecare producator pune 2 numere ODATA");
+        gui.log("Sincronizare distribuită în fiecare clasă");
+        gui.log("=================================");
 
-        Depozit depozit = new Depozit(D, Y, Z, gui);
+        ExecutorService executor = Executors.newFixedThreadPool(7);
 
-        ExecutorService executor = Executors.newFixedThreadPool(7); // 3 producers + 4 consumers
+        for (int i = 1; i <= 3; i++) {
+            executor.execute(new Producer(i, gui));
+        }
 
-        Producer p1 = new Producer(1, depozit, gui);
-        Producer p2 = new Producer(2, depozit, gui);
-        Producer p3 = new Producer(3, depozit, gui);
-
-        Consumer c1 = new Consumer(1, depozit, gui);
-        Consumer c2 = new Consumer(2, depozit, gui);
-        Consumer c3 = new Consumer(3, depozit, gui);
-        Consumer c4 = new Consumer(4, depozit, gui);
-
-
-        executor.submit(p1);
-        executor.submit(p2);
-        executor.submit(p3);
-
-        executor.submit(c1);
-        executor.submit(c2);
-        executor.submit(c3);
-        executor.submit(c4);
-
+        for (int i = 1; i <= Y; i++) {
+            executor.execute(new Consumer(i, gui));
+        }
 
         executor.shutdown();
 
         try {
-
-            if (!executor.awaitTermination(60, TimeUnit.SECONDS)) {
-                executor.shutdownNow();
-            }
+            executor.awaitTermination(10, TimeUnit.SECONDS);
         } catch (InterruptedException e) {
-            executor.shutdownNow();
             Thread.currentThread().interrupt();
         }
-    }
-}
 
-//CLASA PRODUCER - Vadim
-class Producer implements Runnable {
-    private int id;
-    private Depozit depozit;
-    private ProducerConsumerGUI gui;
-    private Random random = new Random();
-
-    public Producer(int id, Depozit depozit, ProducerConsumerGUI gui) {
-        this.id = id;
-        this.depozit = depozit;
-        this.gui = gui;
+        gui.log("\n========== RAPORT FINAL ==========");
+        gui.log("Total produse generate: " + totalProduced.get());
+        gui.log("Total produse consumate: " + totalConsumed.get());
+        gui.log("Produse ramase in buffer: " + buffer.size());
+        gui.log("==================================");
     }
 
-    public void pune(int nr1, int nr2) {
-        depozit.pune(nr1, nr2);
-        gui.log("Producător " + id + " a pus produsele: " + nr1 + " și " + nr2);
-    }
+    // CLASA PRODUCER - Vadim
+    static class Producer implements Runnable {
+        private final int id;
+        private final ProducerConsumerGUI gui;
+        private final Random random = new Random();
 
-    public void run() {
-        while (true) {
-            if (depozit.productieCompleta()) {
-                gui.log("Producător " + id + " s-a oprit - productie completa");
-                return;
-            }
+        Producer(int id, ProducerConsumerGUI gui) {
+            this.id = id;
+            this.gui = gui;
+        }
 
-            int nr1 = genereazaNumarImpar();
-            int nr2 = genereazaNumarImpar();
-
-            gui.log("Producător " + id + " a generat: " + nr1 + " și " + nr2);
-
-            pune(nr1, nr2);
-
+        @Override
+        public void run() {
             try {
-                Thread.sleep(random.nextInt(300) + 100);
+                while (true) {
+                    if (checkProductionComplete()) {
+                        break;
+                    }
+
+                    int nr1 = generateOddNumber();
+                    int nr2 = generateOddNumber();
+
+                    gui.log("Producator " + id + " a generat: " + nr1 + " si " + nr2);
+
+                    produceBothNumbers(nr1, nr2);
+
+                    Thread.sleep(random.nextInt(300) + 100);
+                }
+
+                gui.log("Producator " + id + " a terminat!");
             } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                return;
+                gui.log("Producator " + id + " a fost intrerupt");
             }
         }
-    }
 
-    private int genereazaNumarImpar() {
-        int nr = random.nextInt(50) + 1;
-        if (nr % 2 == 0) {
-            nr++;
-        }
-        return nr;
-    }
-}
-
-//CLASA CONSUMER - Maxim
-class Consumer implements Runnable {
-    private int id;
-    private Depozit depozit;
-    private ProducerConsumerGUI gui;
-    private Random random = new Random();
-    private int consumate = 0;
-
-    public Consumer(int id, Depozit depozit, ProducerConsumerGUI gui) {
-        this.id = id;
-        this.depozit = depozit;
-        this.gui = gui;
-    }
-
-    public int ia() {
-        int nr = depozit.ia();
-
-        if (nr == -1) {
-            gui.log("Consumator " + id + " s-a oprit - nu mai sunt produse. A consumat: " + consumate + "/" + depozit.Z);
-            return -1;
-        }
-
-        consumate++;
-        gui.log("Consumator " + id + " a consumat: " + nr + " (total consumate: " + consumate + "/" + depozit.Z + ")");
-        return nr;
-    }
-
-    public void run() {
-        while (consumate < depozit.Z) {
-            int nr = ia();
-
-            if (nr == -1) {
-                return;
+        private boolean checkProductionComplete() {
+            synchronized (lock) {
+                if (totalProduced.get() >= TOTAL_NEEDED) {
+                    productionComplete = true;
+                    lock.notifyAll();
+                    return true;
+                }
+                return false;
             }
+        }
 
+        private void produceBothNumbers(int nr1, int nr2) throws InterruptedException {
+            synchronized (lock) {
+                while (buffer.size() > D - 2) {
+                    gui.log("Producator " + id + " asteapta - nu are loc pentru 2 numere (" +
+                            buffer.size() + "/" + D + ")");
+                    lock.wait();
+                }
+
+                buffer.add(nr1);
+                buffer.add(nr2);
+
+                totalProduced.addAndGet(2);
+
+                gui.log("Producator " + id + " a adaugat ODATA: " + nr1 + " si " + nr2 +
+                        " | Total: " + totalProduced.get() + "/" + TOTAL_NEEDED +
+                        " | Buffer: " + buffer.size() + "/" + D);
+
+                lock.notifyAll();
+            }
+        }
+
+        private int generateOddNumber() {
+            int nr = random.nextInt(50) + 1;
+            return (nr % 2 == 0) ? nr + 1 : nr;
+        }
+    }
+
+    // CLASA CONSUMER - Maxim
+    static class Consumer implements Runnable {
+        private final int id;
+        private final ProducerConsumerGUI gui;
+        private final Random random = new Random();
+        private int consumedCount = 0;
+
+        Consumer(int id, ProducerConsumerGUI gui) {
+            this.id = id;
+            this.gui = gui;
+        }
+
+        @Override
+        public void run() {
             try {
-                Thread.sleep(random.nextInt(200) + 100);
+                while (consumedCount < Z) {
+                    int item = consumeNumber();
+
+                    if (item == -1) {
+                        gui.log("Consumator " + id + " - productie completa");
+                        break;
+                    }
+
+                    if (item != -2) {
+                        consumedCount++;
+                        totalConsumed.incrementAndGet();
+
+                        gui.log("Consumator " + id + " a consumat: " + item +
+                                " (" + consumedCount + "/" + Z + ")");
+
+                        if (consumedCount >= Z) {
+                            gui.log("Consumator " + id + " a fost indestulat!");
+                            break;
+                        }
+                    }
+
+                    Thread.sleep(random.nextInt(300) + 100);
+                }
+
+                gui.log("Consumator " + id + " terminat cu " +
+                        consumedCount + " produse");
             } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                return;
+                gui.log("Consumator " + id + " a fost intrerupt");
             }
         }
 
-        gui.log("Consumator " + id + " a terminat! A consumat total: " + consumate + " produse");
-    }
-}
+        private int consumeNumber() throws InterruptedException {
+            synchronized (lock) {
+                while (buffer.isEmpty()) {
+                    if (productionComplete) {
+                        return -1;
+                    }
+                    gui.log("Consumator " + id + " asteapta - buffer gol");
+                    lock.wait();
+                }
 
-//CLASA DEPOZIT - Clasa comuna
-class Depozit {
-    private int[] buffer;
-    int D;
-    int Z;
-    private ProducerConsumerGUI gui;
+                int item = buffer.remove(0);
+                gui.log("Consumator " + id + " a luat: " + item +
+                        " | Buffer: " + buffer.size() + "/" + D);
 
-    private int pozitieScrie = 0;
-    private int pozitieCiteste = 0;
-    private int cantitate = 0;
+                lock.notifyAll();
 
-    private int totalProduse = 0;
-    private int totalConsumate = 0;
-    private int totalNecesar;
-
-    public Depozit(int D, int Y, int Z, ProducerConsumerGUI gui) {
-        this.D = D;
-        this.Z = Z;
-        this.buffer = new int[D];
-        this.totalNecesar = Y * Z;
-        this.gui = gui;
-
-        gui.log("=== CONFIGURARE ===");
-        gui.log("Depozit: " + D);
-        gui.log("Consumatori: " + Y);
-        gui.log("Produse/consumator: " + Z);
-        gui.log("Total necesar: " + totalNecesar);
-        gui.log("===================");
-    }
-
-    public synchronized boolean productieCompleta() {
-        return totalProduse >= totalNecesar;
-    }
-
-    public synchronized void pune(int nr1, int nr2) {
-
-        while (cantitate >= D - 1) {
-            try {
-                wait();
-            } catch (InterruptedException e) {}
-        }
-
-        if (totalProduse >= totalNecesar) {
-            notifyAll();
-            return;
-        }
-
-
-        buffer[pozitieScrie] = nr1;
-        pozitieScrie = (pozitieScrie + 1) % D;
-        cantitate++;
-        totalProduse++;
-
-
-        buffer[pozitieScrie] = nr2;
-        pozitieScrie = (pozitieScrie + 1) % D;
-        cantitate++;
-        totalProduse++;
-
-        notifyAll();
-    }
-
-    public synchronized int ia() {
-        while (cantitate == 0) {
-            if (totalProduse >= totalNecesar && totalConsumate >= totalNecesar) {
-                return -1;
+                return item;
             }
-
-            try {
-                wait();
-            } catch (InterruptedException e) {}
         }
-
-        int nr = buffer[pozitieCiteste];
-        pozitieCiteste = (pozitieCiteste + 1) % D;
-        cantitate--;
-        totalConsumate++;
-
-        notifyAll();
-        return nr;
     }
 }
