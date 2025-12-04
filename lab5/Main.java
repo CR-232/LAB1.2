@@ -26,7 +26,7 @@ public class Main {
         Consumer c3 = new Consumer(3, depozit, gui);
         Consumer c4 = new Consumer(4, depozit, gui);
 
-        // Submit tasks to thread pool instead of starting threads directly
+
         executor.submit(p1);
         executor.submit(p2);
         executor.submit(p3);
@@ -35,11 +35,11 @@ public class Main {
         executor.submit(c3);
         executor.submit(c4);
 
-        // Shutdown the executor
+
         executor.shutdown();
 
         try {
-            // Wait for all tasks to complete
+
             if (!executor.awaitTermination(60, TimeUnit.SECONDS)) {
                 executor.shutdownNow();
             }
@@ -182,7 +182,7 @@ class Depozit {
     }
 
     public synchronized void pune(int nr1, int nr2) {
-        // Așteaptă până când sunt cel puțin 2 locuri libere în depozit
+
         while (cantitate >= D - 1) {
             try {
                 wait();
@@ -194,13 +194,13 @@ class Depozit {
             return;
         }
 
-        // Pune primul produs
+
         buffer[pozitieScrie] = nr1;
         pozitieScrie = (pozitieScrie + 1) % D;
         cantitate++;
         totalProduse++;
 
-        // Pune al doilea produs
+
         buffer[pozitieScrie] = nr2;
         pozitieScrie = (pozitieScrie + 1) % D;
         cantitate++;
