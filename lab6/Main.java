@@ -1,17 +1,19 @@
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Random;
-import java.util.concurrent.Phaser;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.Condition;
 
 public class Main {
-    public static final int BUFFER_CAPACITY = 5;
-    public static final int TOTAL_ITEMS = 180;
-    public static final int NUM_PRODUCERS = 3;
-    public static final int NUM_CONSUMERS = 4;
+    public static final int CAPACITATE_DEPOZIT = 5;
+    public static final int NUMAR_TOTAL_OBIECTE = 45;
+    public static final int NUMAR_PRODUCATORI = 3;
+    public static final int NUMAR_CONSUMATORI = 4;
 
     private static GUI gui;
 
+
+    // CLASA helper statică - gestionează toate mesajele și actualizările pentru GUI și consolă
     public static class Logger {
         public static void setGUI(GUI guiInstance) {
             gui = guiInstance;
@@ -38,277 +40,220 @@ public class Main {
         }
     }
 
+
+    //CLASA Depozit
     public static class Depozit {
-        final Deque<Integer> buffer = new ArrayDeque<>(BUFFER_CAPACITY);
+        final Deque<Integer> buffer = new ArrayDeque<>(CAPACITATE_DEPOZIT);
         final Random rnd = new Random();
         final ReentrantLock lock = new ReentrantLock(true);
+        final Condition notFull = lock.newCondition();
+        final Condition notEmpty = lock.newCondition();
 
-        int totalProduced = 0;
-        int totalConsumed = 0;
-        volatile boolean done = false;
-        boolean fullAnnounced = false;
-        boolean emptyAnnounced = false;
+        int totalProduse = 0;
+        int totalConsumate = 0;
+        boolean producatoriActive = true;
+        boolean consumatoriActive = false;
 
-        public boolean tryProduce(String name) {
+        public void produce(String nume) throws InterruptedException {
             lock.lock();
             try {
-                if (done) return false;
-                if (totalProduced >= TOTAL_ITEMS) return false;
-                if (buffer.size() == BUFFER_CAPACITY) return false;
-
-                int value = rnd.nextInt(1000);
-                buffer.addLast(value);
-                totalProduced++;
-
-                Logger.log(String.format("[%s] Produced %d (buffer size=%d, totalProduced=%d)\n",
-                        name, value, buffer.size(), totalProduced));
-
-                Logger.updateProgress(totalProduced);
-
-                if (buffer.size() == 1) {
-                    emptyAnnounced = false;
+                // Așteaptă dacă depozitul e plin sau producătorii nu sunt activi
+                while (buffer.size() == CAPACITATE_DEPOZIT || !producatoriActive) {
+                    if (totalProduse >= NUMAR_TOTAL_OBIECTE) return;
+                    if (buffer.size() == CAPACITATE_DEPOZIT) {
+                        producatoriActive = false;
+                        consumatoriActive = true;
+                        Logger.log("\n*** DEPOZIT PLIN (" + CAPACITATE_DEPOZIT + "/" + CAPACITATE_DEPOZIT + ") -> Consumatori pot consuma ***\n");
+                        notEmpty.signalAll();
+                    }
+                    notFull.await();
                 }
 
-                return true;
+                if (totalProduse >= NUMAR_TOTAL_OBIECTE) return;
+
+                int valoare;
+                do {
+                    valoare = rnd.nextInt(1000);
+                } while (valoare % 2 == 0);
+
+                buffer.addLast(valoare);
+                totalProduse++;
+
+                Logger.log(String.format("[%s] Produs %d (depozit=%d, totalProduse=%d)\n",
+                        nume, valoare, buffer.size(), totalProduse));
+
+                Logger.updateProgress(totalProduse);
+
+                // Dacă am umplut depozitul, activăm consumatorii
+                if (buffer.size() == CAPACITATE_DEPOZIT) {
+                    producatoriActive = false;
+                    consumatoriActive = true;
+                    Logger.log("\n*** DEPOZIT PLIN (" + CAPACITATE_DEPOZIT + "/" + CAPACITATE_DEPOZIT + ") -> Consumatori pot consuma ***\n");
+                    notEmpty.signalAll();
+                }
+
             } finally {
                 lock.unlock();
             }
         }
 
-        public boolean tryConsume(String name) {
+        public void consuma(String nume) throws InterruptedException {
             lock.lock();
             try {
-                if (done) return false;
-                if (buffer.isEmpty()) return false;
-                if (totalConsumed >= TOTAL_ITEMS) {
-                    done = true;
-                    return false;
+                // Așteaptă dacă depozitul e gol sau consumatorii nu sunt activi
+                while (buffer.isEmpty() || !consumatoriActive) {
+                    if (totalConsumate >= NUMAR_TOTAL_OBIECTE) return;
+                    if (buffer.isEmpty() && consumatoriActive) {
+                        consumatoriActive = false;
+                        producatoriActive = true;
+                        Logger.log("\n*** DEPOZIT GOL (0/" + CAPACITATE_DEPOZIT + ") -> Producători pot produce ***\n");
+                        notFull.signalAll();
+                    }
+                    notEmpty.await();
                 }
 
-                int value = buffer.removeFirst();
-                totalConsumed++;
+                if (buffer.isEmpty() || totalConsumate >= NUMAR_TOTAL_OBIECTE) return;
 
-                Logger.log(String.format("[%s] Consumed %d (buffer size=%d, totalConsumed=%d)\n",
-                        name, value, buffer.size(), totalConsumed));
+                int valoare = buffer.removeFirst();
+                totalConsumate++;
 
-                if (buffer.size() == BUFFER_CAPACITY - 1) {
-                    fullAnnounced = false;
+                Logger.log(String.format("[%s] Consumat %d (depozit=%d, totalConsumate=%d)\n",
+                        nume, valoare, buffer.size(), totalConsumate));
+
+                // Dacă am golit depozitul, activăm producătorii
+                if (buffer.isEmpty()) {
+                    consumatoriActive = false;
+                    producatoriActive = true;
+                    Logger.log("\n*** DEPOZIT GOL (0/" + CAPACITATE_DEPOZIT + ") -> Producători pot produce ***\n");
+                    notFull.signalAll();
                 }
 
-                if (totalConsumed >= TOTAL_ITEMS) {
-                    done = true;
-                    Logger.log("\n*** S-au consumat toate cele " + TOTAL_ITEMS + " obiecte ***\n");
+                if (totalConsumate >= NUMAR_TOTAL_OBIECTE) {
+                    Logger.log("\n*** S-au consumat toate cele " + NUMAR_TOTAL_OBIECTE + " obiecte ***\n");
+                    // Notifică toate thread-urile că s-a terminat
+                    notFull.signalAll();
+                    notEmpty.signalAll();
                 }
 
-                return true;
             } finally {
                 lock.unlock();
             }
         }
 
-        public void checkAndAnnounceFull() {
+        public boolean esteTerminat() {
             lock.lock();
             try {
-                if (done) return;
-                if (buffer.size() == BUFFER_CAPACITY && !fullAnnounced) {
-                    Logger.log("\n*** DEPOZIT PLIN (size=" + BUFFER_CAPACITY + ") -> trecem la consum ***\n\n");
-                    fullAnnounced = true;
-                }
-            } finally {
-                lock.unlock();
-            }
-        }
-
-        public void checkAndAnnounceEmpty() {
-            lock.lock();
-            try {
-                if (done) return;
-                if (buffer.isEmpty() && !emptyAnnounced) {
-                    Logger.log("\n*** DEPOZIT GOL (size=0) -> trecem la producție ***\n\n");
-                    emptyAnnounced = true;
-                }
-            } finally {
-                lock.unlock();
-            }
-        }
-
-        public boolean isFull() {
-            lock.lock();
-            try {
-                return buffer.size() == BUFFER_CAPACITY;
-            } finally {
-                lock.unlock();
-            }
-        }
-
-        public boolean isEmpty() {
-            lock.lock();
-            try {
-                return buffer.isEmpty();
+                return totalConsumate >= NUMAR_TOTAL_OBIECTE;
             } finally {
                 lock.unlock();
             }
         }
     }
 
+
+    //CLASA Producator - Vadim
     public static class Producator extends Thread {
         private final Depozit depozit;
-        private final Phaser phaser;
         private final int id;
 
-        public Producator(Depozit depozit, Phaser phaser, int id) {
-            super("Producer-" + id);
+        public Producator(Depozit depozit, int id) {
+            super("Producator-" + id);
             this.depozit = depozit;
-            this.phaser = phaser;
             this.id = id;
         }
 
         @Override
         public void run() {
-            phaser.register();
-
             try {
-                while (!depozit.done) {
-                    int phase = phaser.getPhase();
-
-                    if (phase % 2 == 0) {
-                        while (!depozit.done && depozit.totalProduced < TOTAL_ITEMS) {
-                            if (depozit.isFull()) break;
-
-                            boolean produced = depozit.tryProduce(getName());
-                            if (!produced) break;
-
-                            try {
-                                Thread.sleep(20);
-                            } catch (InterruptedException e) {
-                                break;
-                            }
-                        }
-
-                        depozit.checkAndAnnounceFull();
-                    }
-
-                    phaser.arriveAndAwaitAdvance();
+                while (!depozit.esteTerminat()) {
+                    depozit.produce(getName());
+                    Thread.sleep(50);
                 }
-            } catch (Exception e) {
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
             } finally {
-                phaser.arriveAndDeregister();
-                Logger.log("[" + getName() + "] ieșire.\n");
+                Logger.log("[" + getName() + "] terminat.\n");
             }
         }
     }
 
+
+    //CLASA Consumator - Maxim
     public static class Consumator extends Thread {
         private final Depozit depozit;
-        private final Phaser phaser;
         private final int id;
 
-        public Consumator(Depozit depozit, Phaser phaser, int id) {
-            super("Consumer-" + id);
+        public Consumator(Depozit depozit, int id) {
+            super("Consumator-" + id);
             this.depozit = depozit;
-            this.phaser = phaser;
             this.id = id;
         }
 
         @Override
         public void run() {
-            phaser.register();
-
             try {
-                while (!depozit.done) {
-                    int phase = phaser.getPhase();
-
-                    if (phase % 2 == 1) {
-                        while (!depozit.done && depozit.totalConsumed < TOTAL_ITEMS) {
-                            if (depozit.isEmpty()) break;
-
-                            boolean consumed = depozit.tryConsume(getName());
-                            if (!consumed) break;
-
-                            try {
-                                Thread.sleep(20);
-                            } catch (InterruptedException e) {
-                                break;
-                            }
-                        }
-
-                        depozit.checkAndAnnounceEmpty();
-                    }
-
-                    phaser.arriveAndAwaitAdvance();
+                while (!depozit.esteTerminat()) {
+                    depozit.consuma(getName());
+                    Thread.sleep(50);
                 }
-            } catch (Exception e) {
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
             } finally {
-                phaser.arriveAndDeregister();
-                Logger.log("[" + getName() + "] ieșire.\n");
+                Logger.log("[" + getName() + "] terminat.\n");
             }
         }
     }
 
+
+    // METODA: runSimulation - coordonează și rulează întreaga simulare producător-consumator
     public static void runSimulation(GUI guiInstance) throws InterruptedException {
         Logger.setGUI(guiInstance);
-        Logger.updateStatus("Initializing simulation...");
+        Logger.updateStatus("Se inițializează simularea...");
 
-        Logger.log("=== PORNIRE PROGRAM ===\n");
-        Logger.log("Obiective: " + TOTAL_ITEMS + " obiecte totale (Z=" + TOTAL_ITEMS + ")\n");
-        Logger.log("Capacitate buffer: " + BUFFER_CAPACITY + "\n");
-        Logger.log("Producători: " + NUM_PRODUCERS + "\n");
-        Logger.log("Consumatori: " + NUM_CONSUMERS + "\n");
-        Logger.log("Sincronizare: ReentrantLock + Phaser\n\n");
+        Logger.log("=== ÎNCEPUT SIMULARE ===\n");
+        Logger.log("Obiecte totale (Z): " + NUMAR_TOTAL_OBIECTE + "\n");
+        Logger.log("Capacitate depozit (D): " + CAPACITATE_DEPOZIT + "\n");
+        Logger.log("Producători (X): " + NUMAR_PRODUCATORI + "\n");
+        Logger.log("Consumatori (Y): " + NUMAR_CONSUMATORI + "\n");
+        Logger.log("Obiecte generate: numere impare\n");
+        Logger.log("Sincronizare: ReentrantLock + Condition\n\n");
 
         Depozit depozit = new Depozit();
-        Phaser phaser = new Phaser(1);
 
-        Thread[] producers = new Thread[NUM_PRODUCERS];
-        for (int i = 0; i < NUM_PRODUCERS; i++) {
-            producers[i] = new Producator(depozit, phaser, i + 1);
-            producers[i].start();
+        Thread[] producatori = new Thread[NUMAR_PRODUCATORI];
+        for (int i = 0; i < NUMAR_PRODUCATORI; i++) {
+            producatori[i] = new Producator(depozit, i + 1);
+            producatori[i].start();
         }
 
-        Thread[] consumers = new Thread[NUM_CONSUMERS];
-        for (int i = 0; i < NUM_CONSUMERS; i++) {
-            consumers[i] = new Consumator(depozit, phaser, i + 1);
-            consumers[i].start();
+        Thread[] consumatori = new Thread[NUMAR_CONSUMATORI];
+        for (int i = 0; i < NUMAR_CONSUMATORI; i++) {
+            consumatori[i] = new Consumator(depozit, i + 1);
+            consumatori[i].start();
         }
 
-        Logger.updateStatus("Simulation running...");
+        Logger.updateStatus("Simulare în derulare...");
 
-        try {
-            while (!depozit.done && depozit.totalConsumed < TOTAL_ITEMS) {
-                phaser.arriveAndAwaitAdvance();
-                Thread.sleep(50);
-
-                if (depozit.totalConsumed >= TOTAL_ITEMS && depozit.buffer.isEmpty()) {
-                    depozit.done = true;
-                }
-            }
-        } finally {
-            phaser.forceTermination();
-            Thread.sleep(100);
+        for (Thread p : producatori) {
+            p.join();
+        }
+        for (Thread c : consumatori) {
+            c.join();
         }
 
-        for (Thread p : producers) {
-            p.join(100);
-            if (p.isAlive()) p.interrupt();
-        }
-        for (Thread c : consumers) {
-            c.join(100);
-            if (c.isAlive()) c.interrupt();
-        }
+        Logger.log("\n=== SIMULARE TERMINATĂ ===\n");
+        Logger.log("Total obiecte produse: " + depozit.totalProduse + "\n");
+        Logger.log("Total obiecte consumate: " + depozit.totalConsumate + "\n");
+        Logger.log("Obiecte necesare (Z): " + NUMAR_TOTAL_OBIECTE + "\n");
 
-        Logger.log("\n=== PROGRAM TERMINAT ===\n");
-        Logger.log("Total obiecte produse: " + depozit.totalProduced + "\n");
-        Logger.log("Total obiecte consumate: " + depozit.totalConsumed + "\n");
-        Logger.log("Obiecte necesare (Z): " + TOTAL_ITEMS + "\n");
-
-        if (depozit.totalConsumed == TOTAL_ITEMS) {
-            Logger.log("✓ Toate obiectele au fost produse și consumate cu succes!\n");
+        if (depozit.totalConsumate == NUMAR_TOTAL_OBIECTE) {
+            Logger.log("✓ Toate cele " + NUMAR_TOTAL_OBIECTE + " obiecte au fost produse și consumate!\n");
         } else {
-            Logger.log("✗ Programul nu a atins obiectivul complet!\n");
+            Logger.log("✗ Nu s-a atins obiectivul complet!\n");
         }
 
-        Logger.updateStatus("Simulation completed successfully!");
-        Logger.updateProgress(TOTAL_ITEMS);
+        Logger.updateStatus("Simulare completată cu succes!");
+        Logger.updateProgress(NUMAR_TOTAL_OBIECTE);
     }
 
     public static void main(String[] args) {
