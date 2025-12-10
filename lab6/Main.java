@@ -1,57 +1,27 @@
-import java.io.FileWriter;
-import java.io.PrintWriter;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Random;
 import java.util.concurrent.Phaser;
+import java.util.concurrent.locks.ReentrantLock;
 
-public class ProducerConsumerSimulation {
-
-    // Parametri configurabili
+public class Main {
     public static final int BUFFER_CAPACITY = 5;
     public static final int TOTAL_ITEMS = 180;
     public static final int NUM_PRODUCERS = 3;
     public static final int NUM_CONSUMERS = 4;
 
-    // Referință către GUI
-    private static SimpleSimulationGUI gui;
+    private static GUI gui;
 
-    // Logger pentru afișare în GUI și scriere în fișier
     public static class Logger {
-        private static PrintWriter fileWriter;
-
-        static {
-            try {
-                fileWriter = new PrintWriter(new FileWriter("producer_consumer_log.txt"));
-            } catch (Exception e) {
-                e.printStackTrace();
-                fileWriter = null;
-            }
-        }
-
-        public static void setGUI(SimpleSimulationGUI guiInstance) {
+        public static void setGUI(GUI guiInstance) {
             gui = guiInstance;
         }
 
         public static synchronized void log(String message) {
-            // Afișează în GUI
             if (gui != null) {
                 gui.appendToConsole(message);
             } else {
-                // Dacă nu există GUI, afișează în consolă
                 System.out.print(message);
-            }
-
-            // Scrie în fișier (dar nu afișăm în GUI)
-            if (fileWriter != null) {
-                fileWriter.print(message);
-                fileWriter.flush();
-            }
-        }
-
-        public static synchronized void close() {
-            if (fileWriter != null) {
-                fileWriter.close();
             }
         }
 
@@ -68,10 +38,10 @@ public class ProducerConsumerSimulation {
         }
     }
 
-    // Clasa Depot
-    public static class Depot {
+    public static class Depozit {
         final Deque<Integer> buffer = new ArrayDeque<>(BUFFER_CAPACITY);
         final Random rnd = new Random();
+        final ReentrantLock lock = new ReentrantLock(true);
 
         int totalProduced = 0;
         int totalConsumed = 0;
@@ -80,7 +50,9 @@ public class ProducerConsumerSimulation {
         boolean emptyAnnounced = false;
 
         public boolean tryProduce(String name) {
-            synchronized (this) {
+            lock.lock();
+            try {
+                if (done) return false;
                 if (totalProduced >= TOTAL_ITEMS) return false;
                 if (buffer.size() == BUFFER_CAPACITY) return false;
 
@@ -98,12 +70,20 @@ public class ProducerConsumerSimulation {
                 }
 
                 return true;
+            } finally {
+                lock.unlock();
             }
         }
 
         public boolean tryConsume(String name) {
-            synchronized (this) {
+            lock.lock();
+            try {
+                if (done) return false;
                 if (buffer.isEmpty()) return false;
+                if (totalConsumed >= TOTAL_ITEMS) {
+                    done = true;
+                    return false;
+                }
 
                 int value = buffer.removeFirst();
                 totalConsumed++;
@@ -115,54 +95,70 @@ public class ProducerConsumerSimulation {
                     fullAnnounced = false;
                 }
 
-                if (totalConsumed >= TOTAL_ITEMS && buffer.isEmpty()) {
+                if (totalConsumed >= TOTAL_ITEMS) {
                     done = true;
+                    Logger.log("\n*** S-au consumat toate cele " + TOTAL_ITEMS + " obiecte ***\n");
                 }
 
                 return true;
+            } finally {
+                lock.unlock();
             }
         }
 
         public void checkAndAnnounceFull() {
-            synchronized (this) {
+            lock.lock();
+            try {
+                if (done) return;
                 if (buffer.size() == BUFFER_CAPACITY && !fullAnnounced) {
                     Logger.log("\n*** DEPOZIT PLIN (size=" + BUFFER_CAPACITY + ") -> trecem la consum ***\n\n");
                     fullAnnounced = true;
                 }
+            } finally {
+                lock.unlock();
             }
         }
 
         public void checkAndAnnounceEmpty() {
-            synchronized (this) {
+            lock.lock();
+            try {
+                if (done) return;
                 if (buffer.isEmpty() && !emptyAnnounced) {
                     Logger.log("\n*** DEPOZIT GOL (size=0) -> trecem la producție ***\n\n");
                     emptyAnnounced = true;
                 }
+            } finally {
+                lock.unlock();
             }
         }
 
         public boolean isFull() {
-            synchronized (this) {
+            lock.lock();
+            try {
                 return buffer.size() == BUFFER_CAPACITY;
+            } finally {
+                lock.unlock();
             }
         }
 
         public boolean isEmpty() {
-            synchronized (this) {
+            lock.lock();
+            try {
                 return buffer.isEmpty();
+            } finally {
+                lock.unlock();
             }
         }
     }
 
-    // Clasa Producer
-    public static class Producer extends Thread {
-        private final Depot depot;
+    public static class Producator extends Thread {
+        private final Depozit depozit;
         private final Phaser phaser;
         private final int id;
 
-        public Producer(Depot depot, Phaser phaser, int id) {
+        public Producator(Depozit depozit, Phaser phaser, int id) {
             super("Producer-" + id);
-            this.depot = depot;
+            this.depozit = depozit;
             this.phaser = phaser;
             this.id = id;
         }
@@ -172,28 +168,29 @@ public class ProducerConsumerSimulation {
             phaser.register();
 
             try {
-                while (!depot.done && depot.totalProduced < TOTAL_ITEMS) {
+                while (!depozit.done) {
                     int phase = phaser.getPhase();
 
                     if (phase % 2 == 0) {
-                        while (!depot.done &&
-                                depot.totalProduced < TOTAL_ITEMS &&
-                                depot.buffer.size() < BUFFER_CAPACITY) {
+                        while (!depozit.done && depozit.totalProduced < TOTAL_ITEMS) {
+                            if (depozit.isFull()) break;
 
-                            boolean produced = depot.tryProduce(getName());
+                            boolean produced = depozit.tryProduce(getName());
                             if (!produced) break;
 
-                            try { Thread.sleep(20); } catch (InterruptedException e) { break; }
+                            try {
+                                Thread.sleep(20);
+                            } catch (InterruptedException e) {
+                                break;
+                            }
                         }
 
-                        depot.checkAndAnnounceFull();
-
+                        depozit.checkAndAnnounceFull();
                     }
 
                     phaser.arriveAndAwaitAdvance();
                 }
             } catch (Exception e) {
-                // Phaser terminat
             } finally {
                 phaser.arriveAndDeregister();
                 Logger.log("[" + getName() + "] ieșire.\n");
@@ -201,15 +198,14 @@ public class ProducerConsumerSimulation {
         }
     }
 
-    // Clasa Consumer
-    public static class Consumer extends Thread {
-        private final Depot depot;
+    public static class Consumator extends Thread {
+        private final Depozit depozit;
         private final Phaser phaser;
         private final int id;
 
-        public Consumer(Depot depot, Phaser phaser, int id) {
+        public Consumator(Depozit depozit, Phaser phaser, int id) {
             super("Consumer-" + id);
-            this.depot = depot;
+            this.depozit = depozit;
             this.phaser = phaser;
             this.id = id;
         }
@@ -219,28 +215,29 @@ public class ProducerConsumerSimulation {
             phaser.register();
 
             try {
-                while (!depot.done && depot.totalConsumed < TOTAL_ITEMS) {
+                while (!depozit.done) {
                     int phase = phaser.getPhase();
 
                     if (phase % 2 == 1) {
-                        while (!depot.done &&
-                                depot.totalConsumed < TOTAL_ITEMS &&
-                                !depot.buffer.isEmpty()) {
+                        while (!depozit.done && depozit.totalConsumed < TOTAL_ITEMS) {
+                            if (depozit.isEmpty()) break;
 
-                            boolean consumed = depot.tryConsume(getName());
+                            boolean consumed = depozit.tryConsume(getName());
                             if (!consumed) break;
 
-                            try { Thread.sleep(20); } catch (InterruptedException e) { break; }
+                            try {
+                                Thread.sleep(20);
+                            } catch (InterruptedException e) {
+                                break;
+                            }
                         }
 
-                        depot.checkAndAnnounceEmpty();
-
+                        depozit.checkAndAnnounceEmpty();
                     }
 
                     phaser.arriveAndAwaitAdvance();
                 }
             } catch (Exception e) {
-                // Phaser terminat
             } finally {
                 phaser.arriveAndDeregister();
                 Logger.log("[" + getName() + "] ieșire.\n");
@@ -248,72 +245,76 @@ public class ProducerConsumerSimulation {
         }
     }
 
-    // Metoda principală de rulare a simulării
-    public static void runSimulation(SimpleSimulationGUI guiInstance) throws InterruptedException {
-        // Configurează logger-ul cu GUI
+    public static void runSimulation(GUI guiInstance) throws InterruptedException {
         Logger.setGUI(guiInstance);
-
-        // Actualizează status-ul
         Logger.updateStatus("Initializing simulation...");
 
-        // Afișează informațiile inițiale
         Logger.log("=== PORNIRE PROGRAM ===\n");
         Logger.log("Obiective: " + TOTAL_ITEMS + " obiecte totale (Z=" + TOTAL_ITEMS + ")\n");
         Logger.log("Capacitate buffer: " + BUFFER_CAPACITY + "\n");
         Logger.log("Producători: " + NUM_PRODUCERS + "\n");
-        Logger.log("Consumatori: " + NUM_CONSUMERS + "\n\n");
+        Logger.log("Consumatori: " + NUM_CONSUMERS + "\n");
+        Logger.log("Sincronizare: ReentrantLock + Phaser\n\n");
 
-        // Creăm depozitul
-        Depot depot = new Depot();
-
-        // Creăm phaser-ul
+        Depozit depozit = new Depozit();
         Phaser phaser = new Phaser(1);
 
-        // Creăm și pornim producătorii
         Thread[] producers = new Thread[NUM_PRODUCERS];
         for (int i = 0; i < NUM_PRODUCERS; i++) {
-            producers[i] = new Producer(depot, phaser, i + 1);
+            producers[i] = new Producator(depozit, phaser, i + 1);
             producers[i].start();
         }
 
-        // Creăm și pornim consumatorii
         Thread[] consumers = new Thread[NUM_CONSUMERS];
         for (int i = 0; i < NUM_CONSUMERS; i++) {
-            consumers[i] = new Consumer(depot, phaser, i + 1);
+            consumers[i] = new Consumator(depozit, phaser, i + 1);
             consumers[i].start();
         }
 
-        // Actualizează status-ul
         Logger.updateStatus("Simulation running...");
 
-        // Thread-ul principal controlează fazele
         try {
-            while (!depot.done && depot.totalConsumed < TOTAL_ITEMS) {
+            while (!depozit.done && depozit.totalConsumed < TOTAL_ITEMS) {
                 phaser.arriveAndAwaitAdvance();
                 Thread.sleep(50);
+
+                if (depozit.totalConsumed >= TOTAL_ITEMS && depozit.buffer.isEmpty()) {
+                    depozit.done = true;
+                }
             }
         } finally {
             phaser.forceTermination();
+            Thread.sleep(100);
         }
 
-        // Așteaptă terminarea thread-urilor
-        for (Thread p : producers) p.join();
-        for (Thread c : consumers) c.join();
+        for (Thread p : producers) {
+            p.join(100);
+            if (p.isAlive()) p.interrupt();
+        }
+        for (Thread c : consumers) {
+            c.join(100);
+            if (c.isAlive()) c.interrupt();
+        }
 
-        // Rezultate finale
         Logger.log("\n=== PROGRAM TERMINAT ===\n");
-        Logger.log("Total obiecte produse: " + depot.totalProduced + "\n");
-        Logger.log("Total obiecte consumate: " + depot.totalConsumed + "\n");
+        Logger.log("Total obiecte produse: " + depozit.totalProduced + "\n");
+        Logger.log("Total obiecte consumate: " + depozit.totalConsumed + "\n");
         Logger.log("Obiecte necesare (Z): " + TOTAL_ITEMS + "\n");
 
-        // Închide logger-ul
-        Logger.close();
+        if (depozit.totalConsumed == TOTAL_ITEMS) {
+            Logger.log("✓ Toate obiectele au fost produse și consumate cu succes!\n");
+        } else {
+            Logger.log("✗ Programul nu a atins obiectivul complet!\n");
+        }
 
-        // Actualizează status-ul final
         Logger.updateStatus("Simulation completed successfully!");
         Logger.updateProgress(TOTAL_ITEMS);
+    }
 
-        // Mesaj suplimentar
-        Logger.log("\nRezultatele au fost salvate în fișierul: producer_consumer_log.txt\n");
+    public static void main(String[] args) {
+        javax.swing.SwingUtilities.invokeLater(() -> {
+            GUI gui = new GUI();
+            gui.setVisible(true);
+        });
     }
 }
